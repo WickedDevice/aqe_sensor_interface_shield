@@ -24,7 +24,7 @@ void onRequestService(void);
 void onReceiveService(uint8_t* inBytes, int numBytes);
 
 /* Utility constants and prototypes */
-void blinkLEDs(uint8_t n);
+void blinkLEDs(uint8_t n, uint8_t which_led);
 
 void main(void) __attribute__((noreturn));
 void main(void) {
@@ -40,10 +40,16 @@ void main(void) {
     twi_attachSlaveRxEvent(onReceiveService);
     twi_init();
 
+    // enable the adjustable regulators
+    NO2_HEATER_INIT();
+    CO_HEATER_INIT();
+    ENABLE_NO2_HEATER();
+    ENABLE_CO_HEATER();
+
     POWER_LED_OFF();
 
     sei();
-    blinkLEDs(2);
+    blinkLEDs(2, 0);
 
     // This loop runs forever, its sole purpose is to keep the heater power constant
     // it can be interrupted at any point by a TWI event
@@ -69,16 +75,26 @@ void onRequestService(void){
     uint8_t response[4] = {0,0,0,0};
     uint16_t analog_value = 0;
 
-    blinkLEDs(1); // good times
+    //_delay_ms(5000);
+    switch(egg_bus_get_command_received()){
+    case EGG_BUS_COMMAND_SENSOR_COUNT:
+        blinkLEDs(2, 0); // good times
+        break;
+    case EGG_BUS_COMMAND_GET_RAW_VALUE:
+    case EGG_BUS_COMMAND_GET_CALCULATED_VALUE:
+        blinkLEDs(2, 1); // good times
+        break;
+    }
+
 
     switch(egg_bus_get_command_received()){
     case EGG_BUS_COMMAND_SENSOR_COUNT:
-        response[3] = 2; // this unit supports two sensors
+        response[3] = EGG_BUS_NUM_HOSTED_SENSORS; // this unit supports two sensors
         break;
     case EGG_BUS_COMMAND_GET_RAW_VALUE:
     case EGG_BUS_COMMAND_GET_CALCULATED_VALUE:
         // read the analog sensor that has been previously commanded
-        analog_value = analogRead(egg_bus_get_sensor_index_requested());
+        analog_value = analogRead(egg_bus_map_to_analog_pin(egg_bus_get_sensor_index_requested()));
         response[2] = analog_value >> 8;
         response[3] = analog_value & 0xff;
         break;
@@ -92,7 +108,7 @@ void onRequestService(void){
 // this gets called when you get an SLA+W  then numBytes bytes, then stop
 //   numBytes bytes have been buffered in inBytes by the twi library
 void onReceiveService(uint8_t* inBytes, int numBytes){
-    blinkLEDs(2); // good times
+    //blinkLEDs(2, 1); // good times
     // numBytes should always be two... per the protocol
     egg_bus_set_command_received(inBytes[0]);
 
@@ -106,9 +122,10 @@ void onReceiveService(uint8_t* inBytes, int numBytes){
 }
 
 // just a visual feedback mechanism
-void blinkLEDs(uint8_t n){
-    for(uint8_t i = 0; i < n; i++ ){
-        STATUS_LED_TOGGLE();
+void blinkLEDs(uint8_t n, uint8_t which_led){
+    for(uint8_t i = 0; i < 2 * n; i++ ){
+        if(which_led == 0) STATUS_LED_TOGGLE();
+        else POWER_LED_TOGGLE();
         _delay_ms(200);
     }
 }
