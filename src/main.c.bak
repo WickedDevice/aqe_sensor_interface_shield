@@ -1,0 +1,131 @@
+/*
+ * main.c
+ *
+ *  Created on: Jul 14, 2012
+ *      Author: vic
+ */
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <stdint.h>
+#define __DELAY_BACKWARD_COMPATIBLE__
+#include <util/delay.h>
+#include "main.h"
+#include "twi.h"
+
+#define TWI_GET_NUM_SENSORS_ATTACHED    0x00 // no parameters
+#define TWI_GET_RAW_SENSOR_VALUE        0x11 // parameter = sensor index
+#define TWI_GET_CALUCLATED_SENSOR_VALUE 0x22 // parameter = sensor index
+
+unsigned char TWI_Act_On_Failure_In_Last_Transmission(unsigned char TWIerrorMsg);
+void blinkLEDs(uint8_t n);
+
+void main(void) __attribute__((noreturn));
+
+void main(void) {
+
+    uint8_t cmd_params[2] = { 0 }; // cmd_params[0] = Command ID, cmd_params[1] = parameter
+    uint16_t adc_values[NUM_SENSORS_SUPPORTED][2]; // double buffered sensor values
+    uint8_t adc_read_index = 0;
+    unsigned char messageBuf[TWI_BUFFER_SIZE];
+    unsigned char TWI_slaveAddress;
+    // When there has been an error, this function is run and takes care of it
+
+    POWER_LED_INIT();
+    STATUS_LED_INIT();
+    POWER_LED_ON();
+    _delay_ms(1000);
+
+    // Own TWI slave address
+    TWI_slaveAddress = 3;
+
+    // Initialise TWI module for slave operation. Include address and disable General Call.
+    TWI_Slave_Initialise((unsigned char) ((TWI_slaveAddress << TWI_ADR_BITS) | (0 << TWI_GEN_BIT)));
+
+    POWER_LED_OFF();
+
+    sei();
+
+    // Start the TWI transceiver to enable reception of the first command from the TWI Master.
+    TWI_Start_Transceiver();
+
+
+    blinkLEDs(2);
+
+    // This loop runs forever. If the TWI is busy the execution will just continue doing other operations.
+    for (;;) {
+
+        // do stuff other than TWI handling here
+
+        // Check if the TWI Transceiver has completed an operation.
+        if (!TWI_Transceiver_Busy()) {
+            // Check if the last operation was successful
+            if (TWI_statusReg.lastTransOK) {
+                // Check if the last operation was a reception
+
+                if (TWI_statusReg.RxDataInBuf) {
+                    TWI_Get_Data_From_Transceiver(&messageBuf[0], 2);
+                    // Check if the last operation was a reception as General Call
+
+                    switch(messageBuf[0]){
+                    case TWI_GET_NUM_SENSORS_ATTACHED:
+                        messageBuf[0] = 0x12;
+                        messageBuf[1] = 0x34;
+                        messageBuf[2] = 0x56;
+                        messageBuf[3] = 0x78;
+                        TWI_Start_Transceiver_With_Data(&messageBuf[0], 4);
+                        break;
+                    case TWI_GET_RAW_SENSOR_VALUE:
+                        messageBuf[0] = 0x11;
+                        messageBuf[1] = 0x22;
+                        messageBuf[2] = 0x33;
+                        messageBuf[3] = 0x44;
+                        TWI_Start_Transceiver_With_Data(&messageBuf[0], 4);
+                        break;
+                    case TWI_GET_CALUCLATED_SENSOR_VALUE:
+                        messageBuf[0] = 0x55;
+                        messageBuf[1] = 0x66;
+                        messageBuf[2] = 0x77;
+                        messageBuf[3] = 0x88;
+                        TWI_Start_Transceiver_With_Data(&messageBuf[0], 4);
+                        break;
+                    }
+                } else // Ends up here if the last operation was a transmission
+                {
+
+                }
+                // Check if the TWI Transceiver has already been started.
+                // If not then restart it to prepare it for new receptions.
+                if (!TWI_Transceiver_Busy()) {
+                    TWI_Start_Transceiver();
+                }
+            } else // Ends up here if the last operation completed unsuccessfully
+            {
+                TWI_Act_On_Failure_In_Last_Transmission(TWI_Get_State_Info());
+            }
+        }
+    }
+}
+
+unsigned char TWI_Act_On_Failure_In_Last_Transmission(unsigned char TWIerrorMsg) {
+    // A failure has occurred, use TWIerrorMsg to determine the nature of the failure
+    // and take appropriate actions.
+    // Se header file for a list of possible failures messages.
+
+    // This very simple example puts the error code on PORTB and restarts the transceiver with
+    // all the same data in the transmission buffers.
+
+    TWI_Start_Transceiver();
+
+    return TWIerrorMsg;
+}
+
+void blinkLEDs(uint8_t n){
+
+    for(uint8_t i = 0; i < n; i++ ){
+        STATUS_LED_TOGGLE();
+        _delay_ms(50);
+        STATUS_LED_TOGGLE();
+        _delay_ms(200);
+    }
+
+}
