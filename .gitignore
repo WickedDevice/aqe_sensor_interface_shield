@@ -12,4 +12,4 @@
 *.a
 
 # Release directory
-Release/**/*
+Release/
