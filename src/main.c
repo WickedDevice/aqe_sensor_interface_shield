@@ -7,54 +7,31 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <stdint.h>
-#define __DELAY_BACKWARD_COMPATIBLE__
-#include <util/delay.h>
 #include "main.h"
 #include "twi.h"
+#include "spi.h"
 #include "adc.h"
 #include "egg_bus.h"
+#include "utility.h"
 
-/* TWI constants and prototypes */
-#define TWI_SLAVE_ADDRESS               3    // must be less than 127
-#define TWI_BUFFER_SIZE                 8
-#define TWI_GET_NUM_SENSORS_ATTACHED    0x00 // no parameters
-#define TWI_GET_RAW_SENSOR_VALUE        0x11 // parameter = sensor index
-#define TWI_GET_CALUCLATED_SENSOR_VALUE 0x22 // parameter = sensor index
 void onRequestService(void);
 void onReceiveService(uint8_t* inBytes, int numBytes);
 
-/* Utility constants and prototypes */
-void blinkLEDs(uint8_t n, uint8_t which_led);
+void setup(void);
 
 void main(void) __attribute__((noreturn));
 void main(void) {
-    POWER_LED_INIT();
-    STATUS_LED_INIT();
-    POWER_LED_ON();
-    _delay_ms(1000);
 
-    // TWI Initialize
-    twi_setAddress(TWI_SLAVE_ADDRESS);
-    twi_attachSlaveTxEvent(onRequestService);
-    twi_attachSlaveRxEvent(onReceiveService);
-    twi_init();
 
-    // enable the adjustable regulators
-    NO2_HEATER_INIT();
-    CO_HEATER_INIT();
-    ENABLE_NO2_HEATER();
-    ENABLE_CO_HEATER();
-
-    POWER_LED_OFF();
-
-    sei();
-    blinkLEDs(2, 0);
+    setup();
+    sei();    // enable interrupts
 
     // This loop runs forever, its sole purpose is to keep the heater power constant
     // it can be interrupted at any point by a TWI event
     for (;;) {
         manageHeater(NO2_HEATER_POWER_ADC, NO2_HEATER_FEEDBACK_ADC, HEATER_FEEDBACK_RESISTANCE, NO2_HEATER_TARGET_POWER_MW);
         manageHeater(CO_HEATER_POWER_ADC, CO_HEATER_FEEDBACK_ADC, HEATER_FEEDBACK_RESISTANCE, CO_HEATER_TARGET_POWER_MW);
+        delay_sec(5); // only change the heater voltage every five seconds or so to give it time to settle in
     }
 }
 
@@ -63,24 +40,14 @@ void onRequestService(void){
     uint8_t response[4] = {0,0,0,0};
     uint16_t analog_value = 0;
 
-    //_delay_ms(5000); // this tests that clock stretching works
     switch(egg_bus_get_command_received()){
     case EGG_BUS_COMMAND_SENSOR_COUNT:
-        blinkLEDs(2, 0); // good times
-        break;
-    case EGG_BUS_COMMAND_GET_RAW_VALUE:
-    case EGG_BUS_COMMAND_GET_CALCULATED_VALUE:
-        blinkLEDs(1, 0); // good times
-        break;
-    }
-
-
-    switch(egg_bus_get_command_received()){
-    case EGG_BUS_COMMAND_SENSOR_COUNT:
+        blinkLEDs(2, STATUS_LED); // good times
         response[3] = EGG_BUS_NUM_HOSTED_SENSORS; // this unit supports two sensors
         break;
     case EGG_BUS_COMMAND_GET_RAW_VALUE:
     case EGG_BUS_COMMAND_GET_CALCULATED_VALUE:
+        blinkLEDs(1, STATUS_LED); // good times
         // read the analog sensor that has been previously commanded
         analog_value = analogRead(egg_bus_map_to_analog_pin(egg_bus_get_sensor_index_requested()));
         response[2] = analog_value >> 8;
@@ -115,32 +82,51 @@ void manageHeater(uint8_t power_adc_num, uint8_t feedback_adc_num, uint32_t feed
     uint32_t heater_power_mw = 0;
 
     // read the voltage being output by the adjustable regulator
-    heater_power_voltage = analogRead(NO2_HEATER_POWER_ADC);
+    heater_power_voltage = analogRead(power_adc_num);
     // read the voltage on the low side of the heater
-    heater_feedback_voltage = analogRead(NO2_HEATER_FEEDBACK_ADC);
+    heater_feedback_voltage = analogRead(feedback_adc_num);
 
     // calculate the power being dissipated in the heater, integer math is fun!
-    heater_power_mw = (1000L * ((((uint32_t)(heater_power_voltage - heater_feedback_voltage)) * (uint32_t) heater_feedback_voltage))) / HEATER_FEEDBACK_RESISTANCE;
+    heater_power_mw = (1000L * ((((uint32_t)(heater_power_voltage - heater_feedback_voltage)) * (uint32_t) heater_feedback_voltage))) / feedback_resistance;
+    // the "voltages" in this equation are actually adc counts. To get to voltage we need to multiply by 5V and divide 1024 counts (twice)
+    heater_power_mw *= 5L * 5L;
+    heater_power_mw /= 1024L * 1024L;
+    // now we have an integer value that is actually in units of milliWatts
 
     // adjust the voltage being output by the adjustable regulator by
     // changing increasing or decreasing the variable feedback resistance
-    if(heater_power_mw > NO2_HEATER_TARGET_POWER_MW){
+    if(heater_power_mw > target_power_mw){
         // cool down a bit
         //TODO: implement call to library function
     }
-    else if(heater_power_mw < NO2_HEATER_TARGET_POWER_MW){
+    else if(heater_power_mw < target_power_mw){
         // heat up a bit
         //TODO: implement call to library function
     }
 }
 
+void setup(void){
+    POWER_LED_INIT();
+    STATUS_LED_INIT();
+    POWER_LED_ON();
+    delay_sec(1);
 
-// just a visual feedback mechanism
-void blinkLEDs(uint8_t n, uint8_t which_led){
-    for(uint8_t i = 0; i < 2 * n; i++ ){
-        if(which_led == 0) STATUS_LED_TOGGLE();
-        else POWER_LED_TOGGLE();
-        _delay_ms(200);
-    }
+    // TWI Initialize
+    twi_setAddress(TWI_SLAVE_ADDRESS);
+    twi_attachSlaveTxEvent(onRequestService);
+    twi_attachSlaveRxEvent(onReceiveService);
+    twi_init();
+
+    // enable the adjustable regulators
+    NO2_HEATER_INIT();
+    CO_HEATER_INIT();
+    ENABLE_NO2_HEATER();
+    ENABLE_CO_HEATER();
+
+    POWER_LED_OFF();
+
+    spi_begin();
+
+    blinkLEDs(2, STATUS_LED);
 }
 
