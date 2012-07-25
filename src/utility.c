@@ -25,3 +25,15 @@ void delay_sec(uint8_t n){
         _delay_ms(1000);
     }
 }
+
+uint16_t byte2uint16(uint8_t high_byte, uint8_t low_byte){
+  return (uint16_t)high_byte<<8 | (uint16_t)low_byte;
+}
+
+uint8_t uint16_high_byte(uint16_t uint16){
+  return (uint8_t)(uint16>>8);
+}
+
+uint8_t uint16_low_byte(uint16_t uint16){
+  return (uint8_t)(uint16 & 0x00FF);
+}

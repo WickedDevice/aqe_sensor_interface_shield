@@ -12,7 +12,14 @@
 #include "spi.h"
 #include "adc.h"
 #include "egg_bus.h"
+#include "digipot.h"
 #include "utility.h"
+
+/* this table stores the mapping of sensors to support hardware and associated configuration data */
+static const sensor_config_t sensor_config[EGG_BUS_NUM_HOSTED_SENSORS] = {
+        {NO2_HEATER_FEEDBACK_RESISTANCE, NO2_HEATER_TARGET_POWER_MW, NO2_HEATER_POWER_ADC, NO2_HEATER_FEEDBACK_ADC, DIGIPOT_WIPER0},
+        {CO_HEATER_FEEDBACK_RESISTANCE, CO_HEATER_TARGET_POWER_MW, CO_HEATER_POWER_ADC, CO_HEATER_FEEDBACK_ADC, DIGIPOT_WIPER1}
+};
 
 void onRequestService(void);
 void onReceiveService(uint8_t* inBytes, int numBytes);
@@ -21,7 +28,8 @@ void setup(void);
 
 void main(void) __attribute__((noreturn));
 void main(void) {
-
+    uint8_t momentum = 1;
+    int8_t last_direction = 0;
 
     setup();
     sei();    // enable interrupts
@@ -29,8 +37,16 @@ void main(void) {
     // This loop runs forever, its sole purpose is to keep the heater power constant
     // it can be interrupted at any point by a TWI event
     for (;;) {
-        manageHeater(NO2_HEATER_POWER_ADC, NO2_HEATER_FEEDBACK_ADC, HEATER_FEEDBACK_RESISTANCE, NO2_HEATER_TARGET_POWER_MW);
-        manageHeater(CO_HEATER_POWER_ADC, CO_HEATER_FEEDBACK_ADC, HEATER_FEEDBACK_RESISTANCE, CO_HEATER_TARGET_POWER_MW);
+        for(uint8_t ii = 0; ii < EGG_BUS_NUM_HOSTED_SENSORS; ii++){
+            int8_t direction = manageHeater(ii, momentum);
+            if(direction == last_direction && direction != 0){
+                momentum += 5; // change faster
+            }
+            else{
+                momentum = 1; // reset to slow changes
+            }
+            last_direction = direction;
+        }
         delay_sec(5); // only change the heater voltage every five seconds or so to give it time to settle in
     }
 }
@@ -50,8 +66,8 @@ void onRequestService(void){
         blinkLEDs(1, STATUS_LED); // good times
         // read the analog sensor that has been previously commanded
         analog_value = analogRead(egg_bus_map_to_analog_pin(egg_bus_get_sensor_index_requested()));
-        response[2] = analog_value >> 8;
-        response[3] = analog_value & 0xff;
+        response[2] = uint16_low_byte(analog_value);
+        response[3] = uint16_high_byte(analog_value);
         break;
     }
 
@@ -76,7 +92,19 @@ void onReceiveService(uint8_t* inBytes, int numBytes){
     }
 }
 
-void manageHeater(uint8_t power_adc_num, uint8_t feedback_adc_num, uint32_t feedback_resistance, uint32_t target_power_mw){
+// returns -1 if the calculated power required a decrement
+// returns  0 if no adjustment was needed
+// returns +1 if the calculated power required an increment
+int8_t manageHeater(uint8_t sensor_index, uint8_t momentum){
+
+    sensor_config_t * scfg = &sensor_config[sensor_index];
+    uint8_t power_adc_num = scfg->heater_power_adc;
+    uint8_t feedback_adc_num = scfg->heater_feedback_adc;
+    uint32_t feedback_resistance = scfg->heater_feedback_resistance;
+    uint32_t target_power_mw = scfg->heater_target_power_mw;
+    uint8_t  digipot_wiper_num = scfg->digipot_wiper;
+
+    int8_t  return_value = 0;
     uint16_t heater_power_voltage = 0;
     uint16_t heater_feedback_voltage = 0;
     uint32_t heater_power_mw = 0;
@@ -97,12 +125,16 @@ void manageHeater(uint8_t power_adc_num, uint8_t feedback_adc_num, uint32_t feed
     // changing increasing or decreasing the variable feedback resistance
     if(heater_power_mw > target_power_mw){
         // cool down a bit
-        //TODO: implement call to library function
+        digipot_decrement(digipot_wiper_num, momentum);
+        return_value = -1;
     }
     else if(heater_power_mw < target_power_mw){
         // heat up a bit
-        //TODO: implement call to library function
+        digipot_increment(digipot_wiper_num, momentum);
+        return_value = 1;
     }
+
+    return return_value;
 }
 
 void setup(void){
@@ -126,6 +158,7 @@ void setup(void){
     POWER_LED_OFF();
 
     spi_begin();
+    digipot_init();
 
     blinkLEDs(2, STATUS_LED);
 }
