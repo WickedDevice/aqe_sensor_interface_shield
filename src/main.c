@@ -28,8 +28,8 @@ void setup(void);
 
 void main(void) __attribute__((noreturn));
 void main(void) {
-    uint8_t momentum = 1;
-    int8_t last_direction = 0;
+    uint8_t momentum[2] = {1, 1};
+    int8_t last_direction[2] = {0,0};
 
     setup();
     sei();    // enable interrupts
@@ -38,16 +38,17 @@ void main(void) {
     // it can be interrupted at any point by a TWI event
     for (;;) {
         for(uint8_t ii = 0; ii < EGG_BUS_NUM_HOSTED_SENSORS; ii++){
-            int8_t direction = manageHeater(ii, momentum);
-            if(direction == last_direction && direction != 0){
-                momentum += 5; // change faster
+            int8_t direction = manageHeater(ii, momentum[ii]);
+
+            if(direction == last_direction[ii] && direction != 0){
+                momentum[ii] += 1; // change faster
             }
             else{
-                momentum = 1; // reset to slow changes
+                momentum[ii] = 1; // reset to slow changes
             }
-            last_direction = direction;
+            last_direction[ii] = direction;
         }
-        delay_sec(5); // only change the heater voltage every five seconds or so to give it time to settle in
+        delay_sec(3); // only change the heater voltage every five seconds or so to give it time to settle in
     }
 }
 
@@ -81,13 +82,15 @@ void onRequestService(void){
 // it seems quite critical that we not dilly-dally in this function, get in and get out ASAP
 void onReceiveService(uint8_t* inBytes, int numBytes){
     // numBytes should always be two... per the protocol
-    egg_bus_set_command_received(inBytes[0]);
+    const uint8_t cmd = inBytes[0];
+    const uint8_t param = inBytes[1];
+    egg_bus_set_command_received(cmd);
 
     // only implement cases of commands with parameters here
-    switch(inBytes[0]){
+    switch(cmd){
     case EGG_BUS_COMMAND_SENSOR_COUNT:
     case EGG_BUS_COMMAND_GET_CALCULATED_VALUE:
-        egg_bus_set_sensor_index_requested(inBytes[1]);
+        egg_bus_set_sensor_index_requested(param);
         break;
     }
 }
@@ -97,7 +100,7 @@ void onReceiveService(uint8_t* inBytes, int numBytes){
 // returns +1 if the calculated power required an increment
 int8_t manageHeater(uint8_t sensor_index, uint8_t momentum){
 
-    sensor_config_t * scfg = &sensor_config[sensor_index];
+    sensor_config_t * scfg = (sensor_config_t *) &(sensor_config[sensor_index]);
     uint8_t power_adc_num = scfg->heater_power_adc;
     uint8_t feedback_adc_num = scfg->heater_feedback_adc;
     uint32_t feedback_resistance = scfg->heater_feedback_resistance;
@@ -160,6 +163,7 @@ void setup(void){
     spi_begin();
     digipot_init();
 
-    blinkLEDs(2, STATUS_LED);
+    blinkLEDs(1, STATUS_LED);
+    STATUS_LED_OFF();
 }
 

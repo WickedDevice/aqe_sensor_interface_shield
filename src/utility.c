@@ -13,9 +13,13 @@
 
 // just a visual feedback mechanism
 void blinkLEDs(uint8_t n, uint8_t which_led){
-    for(uint8_t i = 0; i < 2 * n; i++ ){
-        if(which_led == 0) STATUS_LED_TOGGLE();
-        else POWER_LED_TOGGLE();
+    for(uint8_t i = 0; i < n; i++ ){
+        if(which_led == 0) STATUS_LED_ON();
+        else POWER_LED_ON();
+        _delay_ms(50);
+        if(which_led == 0) STATUS_LED_OFF();
+        else POWER_LED_OFF();
+
         _delay_ms(200);
     }
 }
