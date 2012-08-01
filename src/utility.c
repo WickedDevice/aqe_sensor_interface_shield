@@ -41,3 +41,10 @@ uint8_t uint16_high_byte(uint16_t uint16){
 uint8_t uint16_low_byte(uint16_t uint16){
   return (uint8_t)(uint16 & 0x00FF);
 }
+
+void big_endian_copy_uint32_to_buffer(uint32_t value, uint8_t * buffer){
+    int8_t ii = 0;
+    for(ii = 3; ii >= 0; ii--){
+        *buffer++ = (value >> (8 * ii)) & 0xff;
+    }
+}

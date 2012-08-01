@@ -97,4 +97,6 @@ uint16_t byte2uint16(uint8_t high_byte, uint8_t low_byte);
 uint8_t uint16_high_byte(uint16_t uint16);
 uint8_t uint16_low_byte(uint16_t uint16);
 
+void big_endian_copy_uint32_to_buffer(uint32_t value, uint8_t * buffer);
+
 #endif /* UTILITY_H_ */
