@@ -7,6 +7,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <stdint.h>
+#include <string.h>
 #include "main.h"
 #include "twi.h"
 #include "spi.h"
@@ -14,6 +15,7 @@
 #include "egg_bus.h"
 #include "digipot.h"
 #include "heater_control.h"
+#include "mac.h"
 #include "utility.h"
 
 void onRequestService(void);
@@ -55,13 +57,15 @@ void onRequestService(void){
     uint8_t sensor_field_offset = 0;
     uint16_t address = egg_bus_get_read_address(); // get the address requested in the SLA+W
     uint16_t sensor_block_relative_address = address - ((uint16_t) EGG_BUS_SENSOR_BLOCK_BASE_ADDRESS);
+    STATUS_LED_TOGGLE();
     switch(address){
     case EGG_BUS_ADDRESS_SENSOR_COUNT:
         response[0] = EGG_BUS_NUM_HOSTED_SENSORS;
         response_length = 1;
+        //blinkLEDs(1, STATUS_LED);
         break;
     case EGG_BUS_ADDRESS_MODULE_ID:
-        big_endian_copy_uint32_to_buffer(heater_control_get_heater_power_voltage(sensor_index), response);
+        memcpy(response, mac_get(), 6);
         response_length = 6;
         break;
     case EGG_BUS_DEBUG_HEATER_VOLTAGE_PLUS:
@@ -106,6 +110,7 @@ void onRequestService(void){
 //   numBytes bytes have been buffered in inBytes by the twi library
 // it seems quite critical that we not dilly-dally in this function, get in and get out ASAP
 void onReceiveService(uint8_t* inBytes, int numBytes){
+    POWER_LED_TOGGLE();
     switch(inBytes[0]){
     case EGG_BUS_COMMAND_READ:
         // reconstitute the read address
@@ -122,6 +127,8 @@ void setup(void){
     STATUS_LED_INIT();
     POWER_LED_ON();
     delay_sec(1);
+
+    mac_init();
 
     // TWI Initialize
     twi_setAddress(TWI_SLAVE_ADDRESS);
