@@ -57,12 +57,10 @@ void onRequestService(void){
     uint8_t sensor_field_offset = 0;
     uint16_t address = egg_bus_get_read_address(); // get the address requested in the SLA+W
     uint16_t sensor_block_relative_address = address - ((uint16_t) EGG_BUS_SENSOR_BLOCK_BASE_ADDRESS);
-    STATUS_LED_TOGGLE();
     switch(address){
     case EGG_BUS_ADDRESS_SENSOR_COUNT:
         response[0] = EGG_BUS_NUM_HOSTED_SENSORS;
         response_length = 1;
-        //blinkLEDs(1, STATUS_LED);
         break;
     case EGG_BUS_ADDRESS_MODULE_ID:
         memcpy(response, mac_get(), 6);
@@ -72,6 +70,7 @@ void onRequestService(void){
         big_endian_copy_uint32_to_buffer(heater_control_get_heater_power_voltage(sensor_index), response);
         break;
     case EGG_BUS_DEBUG_HEATER_VOLTAGE_MINUS:
+        STATUS_LED_TOGGLE();
         big_endian_copy_uint32_to_buffer(heater_control_get_heater_feedback_voltage(sensor_index), response);
         break;
     default:

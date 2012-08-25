@@ -67,7 +67,7 @@
 #define BIT0 SCIO_HIGH;WAIT_HALF_BIT;SCIO_LOW;WAIT_HALF_BIT;
 #define BIT1 SCIO_LOW;WAIT_HALF_BIT;SCIO_HIGH;WAIT_HALF_BIT;
 
-static uint8_t _mac_address[6] = {0,0,0,0,0,0};
+static uint8_t _mac_address[6] = {1,2,3,4,5,6};
 
 void mac_unio_standby() {
 
