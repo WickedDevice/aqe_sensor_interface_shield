@@ -36,9 +36,15 @@
 
 // Debug Block Definitions
 #define EGG_BUS_DEBUG_BLOCK_BASE_ADDRESS              65408
-#define EGG_BUS_DEBUG_HEATER_VOLTAGE_PLUS             65408
-#define EGG_BUS_DEBUG_HEATER_VOLTAGE_MINUS            65412
-#define EGG_BUS_DEBUG_HEATER_POWER_MW                 65416
+#define EGG_BUS_DEBUG_NO2_HEATER_VOLTAGE_PLUS         65408
+#define EGG_BUS_DEBUG_NO2_HEATER_VOLTAGE_MINUS        65412
+#define EGG_BUS_DEBUG_NO2_HEATER_POWER_MW             65416
+#define EGG_BUS_DEBUG_NO2_DIGIPOT_WIPER               65420
+#define EGG_BUS_DEBUG_CO_HEATER_VOLTAGE_PLUS          65424
+#define EGG_BUS_DEBUG_CO_HEATER_VOLTAGE_MINUS         65428
+#define EGG_BUS_DEBUG_CO_HEATER_POWER_MW              65432
+#define EGG_BUS_DEBUG_CO_DIGIPOT_WIPER                65436
+#define EGG_BUS_DEBUG_DIGIPOT_STATUS                  65440
 
 uint16_t egg_bus_get_read_address();
 uint8_t egg_bus_map_to_analog_pin(uint8_t sensor_index);

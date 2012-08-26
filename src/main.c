@@ -35,7 +35,7 @@ void main(void) {
     // it can be interrupted at any point by a TWI event
     for (;;) {
         for(uint8_t ii = 0; ii < EGG_BUS_NUM_HOSTED_SENSORS; ii++){
-            int8_t direction = heater_control_manage(ii, momentum[ii]);
+            int8_t direction = heater_control_manage(ii, momentum[ii]) > 0 ? 1 : -1;
 
             if(direction == last_direction[ii] && direction != 0){
                 momentum[ii] += 1; // change faster
@@ -43,8 +43,12 @@ void main(void) {
             else{
                 momentum[ii] = 1; // reset to slow changes
             }
-            last_direction[ii] = direction;
+
+            if(direction != 0){
+                last_direction[ii] = direction;
+            }
         }
+
         delay_sec(3); // only change the heater voltage every three seconds or so to give it time to settle in
     }
 }
@@ -66,12 +70,33 @@ void onRequestService(void){
         memcpy(response, mac_get(), 6);
         response_length = 6;
         break;
-    case EGG_BUS_DEBUG_HEATER_VOLTAGE_PLUS:
-        big_endian_copy_uint32_to_buffer(heater_control_get_heater_power_voltage(sensor_index), response);
+    case EGG_BUS_DEBUG_NO2_HEATER_VOLTAGE_PLUS:
+        big_endian_copy_uint32_to_buffer(heater_control_get_heater_power_voltage(0), response);
         break;
-    case EGG_BUS_DEBUG_HEATER_VOLTAGE_MINUS:
-        STATUS_LED_TOGGLE();
-        big_endian_copy_uint32_to_buffer(heater_control_get_heater_feedback_voltage(sensor_index), response);
+    case EGG_BUS_DEBUG_NO2_HEATER_VOLTAGE_MINUS:
+        big_endian_copy_uint32_to_buffer(heater_control_get_heater_feedback_voltage(0), response);
+        break;
+    case EGG_BUS_DEBUG_NO2_HEATER_POWER_MW:
+        big_endian_copy_uint32_to_buffer(heater_control_get_heater_power_mw(0), response);
+        break;
+    case EGG_BUS_DEBUG_NO2_DIGIPOT_WIPER:
+        big_endian_copy_uint32_to_buffer((uint32_t) digipot_read_wiper1(), response);
+        break;
+    case EGG_BUS_DEBUG_CO_HEATER_VOLTAGE_PLUS:
+        big_endian_copy_uint32_to_buffer(heater_control_get_heater_power_voltage(1), response);
+        break;
+    case EGG_BUS_DEBUG_CO_HEATER_VOLTAGE_MINUS:
+        big_endian_copy_uint32_to_buffer(heater_control_get_heater_feedback_voltage(1), response);
+        break;
+    case EGG_BUS_DEBUG_CO_HEATER_POWER_MW:
+        big_endian_copy_uint32_to_buffer(heater_control_get_heater_power_mw(1), response);
+        break;
+    case EGG_BUS_DEBUG_CO_DIGIPOT_WIPER:
+        big_endian_copy_uint32_to_buffer((uint32_t) digipot_read_wiper0(), response);
+        break;
+    case EGG_BUS_DEBUG_DIGIPOT_STATUS:
+        big_endian_copy_uint32_to_buffer((uint32_t) digipot_read_status(), response);
+        blinkLEDs(1, POWER_LED);
         break;
     default:
         if(address >= EGG_BUS_SENSOR_BLOCK_BASE_ADDRESS){
@@ -90,7 +115,6 @@ void onRequestService(void){
                 big_endian_copy_uint32_to_buffer(egg_bus_get_r0_kohms(sensor_index), response);
                 break;
             case EGG_BUS_SENSOR_BLOCK_COMPUTED_VALUE_OFFSET: //
-                blinkLEDs(1, STATUS_LED); // good times
                 big_endian_copy_uint32_to_buffer((uint32_t) analogRead(egg_bus_map_to_analog_pin(sensor_index)), response);
                 break;
             case EGG_BUS_SENSOR_BLOCK_UNITS_MULTIPLIER_OFFSET:

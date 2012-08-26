@@ -30,7 +30,10 @@ void spi_begin() {
   // Warning: if the SS pin ever becomes a LOW INPUT then SPI
   // automatically switches to Slave, so the data direction of
   // the SS pin MUST be kept as OUTPUT.
-  SPCR |= _BV(MSTR);
+
+  // SPI2X = 0, SPR1 = 1, SPR0 = 1 ==> f_osc/128
+
+  SPCR |= _BV(MSTR) | _BV(SPR1) | _BV(SPR0);
   SPCR |= _BV(SPE);
 }
 

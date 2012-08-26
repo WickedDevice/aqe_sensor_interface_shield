@@ -52,3 +52,25 @@ void digipot_write(uint8_t cmd_byte)
   spi_transfer(cmd_byte);
   digipot_deselect_slave();
 }
+
+uint16_t digipot_read(uint8_t cmd_byte)
+{
+  cmd_byte |= DIGIPOT_CMD_READ;
+  digipot_select_slave();
+  uint8_t high_byte = spi_transfer(cmd_byte);
+  uint8_t low_byte  = spi_transfer(0xFF);
+  digipot_deselect_slave();
+  return ((uint16_t)high_byte<<8 | (uint16_t)low_byte);
+}
+
+uint16_t digipot_read_wiper0(){
+    return digipot_read(DIGIPOT_ADR_VOLATILE | DIGIPOT_ADR_WIPER0) & 0x1FF;
+}
+
+uint16_t digipot_read_wiper1(){
+    return digipot_read(DIGIPOT_ADR_VOLATILE | DIGIPOT_ADR_WIPER1) & 0x1FF;
+}
+
+uint16_t digipot_read_status(){
+    return digipot_read(DIGIPOT_ADR_STATUS) & 0x1FF ;
+}

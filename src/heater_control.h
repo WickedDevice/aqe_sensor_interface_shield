@@ -18,7 +18,7 @@ typedef struct{
     uint8_t  digipot_wiper;
 } sensor_config_t;
 
-int8_t heater_control_manage(uint8_t sensor_index, uint8_t momentum);
+int32_t heater_control_manage(uint8_t sensor_index, uint8_t momentum);
 uint16_t heater_control_get_heater_power_voltage(uint8_t sensor_index);
 uint16_t heater_control_get_heater_feedback_voltage(uint8_t sensor_index);
 uint32_t heater_control_get_heater_power_mw(uint8_t sensor_index);
