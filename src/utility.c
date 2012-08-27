@@ -48,3 +48,15 @@ void big_endian_copy_uint32_to_buffer(uint32_t value, uint8_t * buffer){
         *buffer++ = (value >> (8 * ii)) & 0xff;
     }
 }
+
+uint16_t get_r1(uint8_t sensor_index){
+    return sensor_index == 0 ? NO2_SENSOR_R1 : CO_SENSOR_R1;
+}
+
+uint16_t get_r2(uint8_t sensor_index){
+    return sensor_index == 0 ? NO2_SENSOR_R2 : CO_SENSOR_R2;
+}
+
+uint16_t get_r3(uint8_t sensor_index){
+    return sensor_index == 0 ? NO2_SENSOR_R3 : CO_SENSOR_R3;
+}

@@ -90,6 +90,45 @@
         ENABLE_CO_HEATER_PORT ^= _BV(ENABLE_CO_HEATER_PIN); \
     }while(0)
 
+
+#define SENSOR_R1_DDR  DDRC
+#define SENSOR_R1_PORT PORTC
+#define SENSOR_R1_PIN  7
+// high impedance input
+#define SENSOR_R2_ENABLE() do{ \
+        SENSOR_R1_DDR  |= _BV(SENSOR_R1_PIN);\
+        SENSOR_R1_PORT &= ~_BV(SENSOR_R1_PIN);\
+    } while(0);
+// GND output
+#define SENSOR_R2_DISABLE() do{ \
+        SENSOR_R1_DDR  &= ~_BV(SENSOR_R1_PIN);\
+        SENSOR_R1_PORT &= ~_BV(SENSOR_R1_PIN);\
+    } while(0);
+
+#define SENSOR_R2_DDR  DDRD
+#define SENSOR_R2_PORT PORTD
+#define SENSOR_R2_PIN  1
+// high impedance input
+#define SENSOR_R3_ENABLE() do{ \
+        SENSOR_R2_DDR  |= _BV(SENSOR_R2_PIN);\
+        SENSOR_R2_PORT &= ~_BV(SENSOR_R2_PIN);\
+    } while(0);
+// GND output
+#define SENSOR_R3_DISABLE() do{ \
+        SENSOR_R2_DDR  &= ~_BV(SENSOR_R2_PIN);\
+        SENSOR_R2_PORT &= ~_BV(SENSOR_R2_PIN);\
+    } while(0);
+
+// low side resistances in hundreds of ohms 2.2kohms => 22
+#define NO2_SENSOR_R1 22
+#define NO2_SENSOR_R2 220
+#define NO2_SENSOR_R3 2200
+#define CO_SENSOR_R1  680
+#define CO_SENSOR_R2  680
+#define CO_SENSOR_R3  6800
+
+
+
 /* Utility constants and prototypes */
 void blinkLEDs(uint8_t n, uint8_t which_led);
 void delay_sec(uint8_t n);
@@ -98,5 +137,9 @@ uint8_t uint16_high_byte(uint16_t uint16);
 uint8_t uint16_low_byte(uint16_t uint16);
 
 void big_endian_copy_uint32_to_buffer(uint32_t value, uint8_t * buffer);
+
+uint16_t get_r1(uint8_t sensor_index);
+uint16_t get_r2(uint8_t sensor_index);
+uint16_t get_r3(uint8_t sensor_index);
 
 #endif /* UTILITY_H_ */

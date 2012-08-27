@@ -17,6 +17,9 @@
 #include "heater_control.h"
 #include "mac.h"
 #include "utility.h"
+#include "math.h"
+#define __DELAY_BACKWARD_COMPATIBLE__
+#include <util/delay.h>
 
 void onRequestService(void);
 void onReceiveService(uint8_t* inBytes, int numBytes);
@@ -61,6 +64,12 @@ void onRequestService(void){
     uint8_t sensor_field_offset = 0;
     uint16_t address = egg_bus_get_read_address(); // get the address requested in the SLA+W
     uint16_t sensor_block_relative_address = address - ((uint16_t) EGG_BUS_SENSOR_BLOCK_BASE_ADDRESS);
+    uint16_t possible_values[3] = {0,0,0};
+    uint16_t possible_low_side_resistances[3] = {0,0,0};
+    uint8_t best_value_index;
+    int16_t minimum_distance_to_512;
+    int16_t current_distance_to_512;
+
     switch(address){
     case EGG_BUS_ADDRESS_SENSOR_COUNT:
         response[0] = EGG_BUS_NUM_HOSTED_SENSORS;
@@ -119,6 +128,43 @@ void onRequestService(void){
                 break;
             case EGG_BUS_SENSOR_BLOCK_UNITS_MULTIPLIER_OFFSET:
                 break;
+            case EGG_BUS_SENSOR_BLOCK_RAW_VALUE_OFFSET:
+                possible_low_side_resistances[0] = get_r1(sensor_index) + get_r2(sensor_index) + get_r3(sensor_index);
+                possible_low_side_resistances[1] = get_r1(sensor_index) + get_r2(sensor_index);
+                possible_low_side_resistances[2] = get_r1(sensor_index);
+
+                // R2 and R3 enabled
+                SENSOR_R2_ENABLE();
+                SENSOR_R3_ENABLE();
+                _delay_ms(10);
+                possible_values[0] = analogRead(egg_bus_map_to_analog_pin(sensor_index));
+
+                // R3 disabled
+                SENSOR_R3_DISABLE();
+                possible_values[1] = analogRead(egg_bus_map_to_analog_pin(sensor_index));
+                _delay_ms(10);
+
+                // R2 and R3 disabled
+                SENSOR_R2_DISABLE();
+                possible_values[2] = analogRead(egg_bus_map_to_analog_pin(sensor_index));
+                _delay_ms(10);
+
+                // figure out which sampled value is "closest to 512" and report that
+                for(uint8_t ii = 0; ii < 3; ii++){
+                    current_distance_to_512 = abs((int16_t) possible_values[ii] - (int16_t) 512);
+
+                    if(minimum_distance_to_512 > current_distance_to_512){
+                        minimum_distance_to_512 = current_distance_to_512;
+                        best_value_index = ii;
+                    }
+                }
+
+                response_length = 8;
+
+                big_endian_copy_uint32_to_buffer((uint32_t) possible_values[best_value_index], response);
+                big_endian_copy_uint32_to_buffer((uint32_t) possible_low_side_resistances[best_value_index], response + 4 );
+
+                break;
             }
         }
         break;
@@ -164,6 +210,10 @@ void setup(void){
     CO_HEATER_INIT();
     ENABLE_NO2_HEATER();
     ENABLE_CO_HEATER();
+
+    // Initialize the 2 sensor dividers as tristated inputs
+    SENSOR_R2_ENABLE();
+    SENSOR_R3_ENABLE();
 
     POWER_LED_OFF();
 
