@@ -57,7 +57,7 @@ void egg_bus_get_sensor_units(uint8_t sensor_index, char * target_buffer){
     strcpy_P(target_buffer, (PGM_P)pgm_read_word(&(egg_bus_sensor_units[sensor_index])));
 }
 
-uint32_t egg_bus_get_r0_kohms(uint8_t sensor_index){
+uint32_t egg_bus_get_r0_ohms(uint8_t sensor_index){
     uint32_t ret_value = 0;
     eeprom_read_block (( void *) &ret_value , ( const void *) (&egg_bus_sensor_r0[sensor_index]) , 4) ;
     return ret_value;

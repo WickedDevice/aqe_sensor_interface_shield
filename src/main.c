@@ -71,6 +71,7 @@ void onRequestService(void){
     uint8_t best_value_index = 0;
     int16_t minimum_distance_to_512 = 1000;
     int16_t current_distance_to_512 = 1000;
+    uint32_t responseValue = 0;
 
     switch(address){
     case EGG_BUS_ADDRESS_SENSOR_COUNT:
@@ -123,7 +124,7 @@ void onRequestService(void){
                 response_length = 16;
                 break;
             case EGG_BUS_SENSOR_BLOCK_R0_OFFSET:
-                big_endian_copy_uint32_to_buffer(egg_bus_get_r0_kohms(sensor_index), response);
+                big_endian_copy_uint32_to_buffer(egg_bus_get_r0_ohms(sensor_index), response);
                 break;
             case EGG_BUS_SENSOR_BLOCK_COMPUTED_VALUE_OFFSET: //
                 big_endian_copy_uint32_to_buffer((uint32_t) analogRead(egg_bus_map_to_analog_pin(sensor_index)), response);
@@ -131,6 +132,7 @@ void onRequestService(void){
             case EGG_BUS_SENSOR_BLOCK_UNITS_MULTIPLIER_OFFSET:
                 break;
             case EGG_BUS_SENSOR_BLOCK_RAW_VALUE_OFFSET:
+            case EGG_BUS_SENSOR_BLOCK_SENSOR_RESISTANCE:
                 possible_low_side_resistances[0] = get_r1(sensor_index) + get_r2(sensor_index) + get_r3(sensor_index);
                 possible_low_side_resistances[1] = get_r1(sensor_index) + get_r2(sensor_index);
                 possible_low_side_resistances[2] = get_r1(sensor_index);
@@ -161,10 +163,17 @@ void onRequestService(void){
                     }
                 }
 
-                response_length = 8;
-
-                big_endian_copy_uint32_to_buffer((uint32_t) possible_values[best_value_index], response);
-                big_endian_copy_uint32_to_buffer((uint32_t) possible_low_side_resistances[best_value_index], response + 4 );
+                if(sensor_field_offset == EGG_BUS_SENSOR_BLOCK_RAW_VALUE_OFFSET){
+                    response_length = 8;
+                    big_endian_copy_uint32_to_buffer((uint32_t) possible_values[best_value_index], response);
+                    big_endian_copy_uint32_to_buffer((uint32_t) possible_low_side_resistances[best_value_index], response + 4 );
+                }
+                else{ // if sensor_field_offset == EGG_BUS_SENSOR_BLOCK_SENSOR_RESISTANCE
+                    responseValue = 1024L - (uint32_t) possible_values[best_value_index];
+                    responseValue *= (uint32_t) possible_low_side_resistances[best_value_index];
+                    responseValue /= (uint32_t) possible_values[best_value_index];
+                    big_endian_copy_uint32_to_buffer(responseValue, response);
+                }
 
                 break;
             }

@@ -32,7 +32,8 @@
 #define EGG_BUS_SENSOR_BLOCK_COMPUTED_VALUE_OFFSET    36
 #define EGG_BUS_SENSOR_BLOCK_UNITS_MULTIPLIER_OFFSET  40
 #define EGG_BUS_SENSOR_BLOCK_RAW_VALUE_OFFSET         44
-// #define EGG_BUS_SENSOR_BLOCK_SPARE_OFFSET          48
+#define EGG_BUS_SENSOR_BLOCK_SENSOR_RESISTANCE        48
+// #define EGG_BUS_SENSOR_BLOCK_SPARE_OFFSET          52
 #define EGG_BUS_SENSOR_BLOCK_RESPONSE_CURVE           64
 
 // Debug Block Definitions
@@ -52,6 +53,6 @@ uint8_t egg_bus_map_to_analog_pin(uint8_t sensor_index);
 void egg_bus_set_read_address(uint16_t read_address);
 void egg_bus_get_sensor_type(uint8_t sensor_index, char * target_buffer);
 void egg_bus_get_sensor_units(uint8_t sensor_index, char * target_buffer);
-uint32_t egg_bus_get_r0_kohms(uint8_t sensor_index);
+uint32_t egg_bus_get_r0_ohms(uint8_t sensor_index);
 
 #endif /* EGG_BUS_H_ */
