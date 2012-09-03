@@ -82,6 +82,9 @@ void onRequestService(void){
         memcpy(response, macaddr, 6);
         response_length = 6;
         break;
+    case EGG_BUS_FIRMWARE_VERSION:
+        big_endian_copy_uint32_to_buffer(EGG_BUS_FIRMWARE_VERSION_NUMBER, response);
+        break;
     case EGG_BUS_DEBUG_NO2_HEATER_VOLTAGE_PLUS:
         big_endian_copy_uint32_to_buffer(heater_control_get_heater_power_voltage(0), response);
         break;

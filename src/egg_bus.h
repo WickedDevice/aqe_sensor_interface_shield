@@ -19,9 +19,12 @@
 
 /* Sensor Module Memory Map Definition */
 
+#define EGG_BUS_FIRMWARE_VERSION_NUMBER   0x00000001
+
 // Header Definitions
 #define EGG_BUS_ADDRESS_SENSOR_COUNT      0
 #define EGG_BUS_ADDRESS_MODULE_ID         1
+#define EGG_BUS_FIRMWARE_VERSION          7
 
 // Sensor Block Definitions
 #define EGG_BUS_SENSOR_BLOCK_BASE_ADDRESS             32
