@@ -26,6 +26,8 @@ void onReceiveService(uint8_t* inBytes, int numBytes);
 
 void setup(void);
 
+uint8_t macaddr[6];
+
 void main(void) __attribute__((noreturn));
 void main(void) {
     uint8_t momentum[2] = {1, 1};
@@ -66,9 +68,9 @@ void onRequestService(void){
     uint16_t sensor_block_relative_address = address - ((uint16_t) EGG_BUS_SENSOR_BLOCK_BASE_ADDRESS);
     uint16_t possible_values[3] = {0,0,0};
     uint16_t possible_low_side_resistances[3] = {0,0,0};
-    uint8_t best_value_index;
-    int16_t minimum_distance_to_512;
-    int16_t current_distance_to_512;
+    uint8_t best_value_index = 0;
+    int16_t minimum_distance_to_512 = 1000;
+    int16_t current_distance_to_512 = 1000;
 
     switch(address){
     case EGG_BUS_ADDRESS_SENSOR_COUNT:
@@ -76,7 +78,7 @@ void onRequestService(void){
         response_length = 1;
         break;
     case EGG_BUS_ADDRESS_MODULE_ID:
-        memcpy(response, mac_get(), 6);
+        memcpy(response, macaddr, 6);
         response_length = 6;
         break;
     case EGG_BUS_DEBUG_NO2_HEATER_VOLTAGE_PLUS:
@@ -197,7 +199,8 @@ void setup(void){
     POWER_LED_ON();
     delay_sec(1);
 
-    mac_init();
+    unio_init(NANODE_MAC_DEVICE);
+    unio_read(macaddr, NANODE_MAC_ADDRESS, 6);
 
     // TWI Initialize
     twi_setAddress(TWI_SLAVE_ADDRESS);
