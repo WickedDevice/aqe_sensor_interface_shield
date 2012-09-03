@@ -27,8 +27,8 @@ PGM_P egg_bus_sensor_types[] PROGMEM = {
 char egg_bus_sensor_units_0[] PROGMEM = "ppm";
 char egg_bus_sensor_units_1[] PROGMEM = "ppm";
 PGM_P egg_bus_sensor_units[] PROGMEM = {
-        egg_bus_sensor_type_0,
-        egg_bus_sensor_type_1
+        egg_bus_sensor_units_0,
+        egg_bus_sensor_units_1
 };
 
 uint16_t EEMEM egg_bus_sensor_r0[EGG_BUS_NUM_HOSTED_SENSORS]  = { 2200, 750}; // values in ohms
