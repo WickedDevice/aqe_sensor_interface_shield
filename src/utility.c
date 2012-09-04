@@ -49,14 +49,26 @@ void big_endian_copy_uint32_to_buffer(uint32_t value, uint8_t * buffer){
     }
 }
 
-uint16_t get_r1(uint8_t sensor_index){
+uint32_t get_r1(uint8_t sensor_index){
     return sensor_index == 0 ? NO2_SENSOR_R1 : CO_SENSOR_R1;
 }
 
-uint16_t get_r2(uint8_t sensor_index){
+uint32_t get_r2(uint8_t sensor_index){
     return sensor_index == 0 ? NO2_SENSOR_R2 : CO_SENSOR_R2;
 }
 
-uint16_t get_r3(uint8_t sensor_index){
+uint32_t get_r3(uint8_t sensor_index){
     return sensor_index == 0 ? NO2_SENSOR_R3 : CO_SENSOR_R3;
+}
+
+uint16_t get_r1r2r3_threshold(uint8_t sensor_index){
+    return sensor_index == 0 ? NO2_R1R2R3_THRESHOLD : CO_R1R2R3_THRESHOLD;
+}
+
+uint16_t get_r1r2_threshold(uint8_t sensor_index){
+    return sensor_index == 0 ? NO2_R1R2_THRESHOLD : CO_R1R2_THRESHOLD;
+}
+
+uint8_t get_sensor_vcc(uint8_t sensor_index){
+    return sensor_index == 0 ? NO2_VCC_TENTH_VOLTS : CO_VCC_TENTH_VOLTS;
 }

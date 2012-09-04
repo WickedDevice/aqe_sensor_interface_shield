@@ -94,13 +94,13 @@
 #define SENSOR_R1_DDR  DDRC
 #define SENSOR_R1_PORT PORTC
 #define SENSOR_R1_PIN  7
-// high impedance input
-#define SENSOR_R2_ENABLE() do{ \
+// GND output
+#define SENSOR_R2_DISABLE() do{ \
         SENSOR_R1_DDR  |= _BV(SENSOR_R1_PIN);\
         SENSOR_R1_PORT &= ~_BV(SENSOR_R1_PIN);\
     } while(0);
-// GND output
-#define SENSOR_R2_DISABLE() do{ \
+// high impedance input
+#define SENSOR_R2_ENABLE() do{ \
         SENSOR_R1_DDR  &= ~_BV(SENSOR_R1_PIN);\
         SENSOR_R1_PORT &= ~_BV(SENSOR_R1_PIN);\
     } while(0);
@@ -108,26 +108,34 @@
 #define SENSOR_R2_DDR  DDRD
 #define SENSOR_R2_PORT PORTD
 #define SENSOR_R2_PIN  1
-// high impedance input
-#define SENSOR_R3_ENABLE() do{ \
+// GND output
+#define SENSOR_R3_DISABLE() do{ \
         SENSOR_R2_DDR  |= _BV(SENSOR_R2_PIN);\
         SENSOR_R2_PORT &= ~_BV(SENSOR_R2_PIN);\
     } while(0);
-// GND output
-#define SENSOR_R3_DISABLE() do{ \
+// high impedance input
+#define SENSOR_R3_ENABLE() do{ \
         SENSOR_R2_DDR  &= ~_BV(SENSOR_R2_PIN);\
         SENSOR_R2_PORT &= ~_BV(SENSOR_R2_PIN);\
     } while(0);
 
-// low side resistances in hundreds of ohms 2.2kohms => 22
-#define NO2_SENSOR_R1 22
-#define NO2_SENSOR_R2 220
-#define NO2_SENSOR_R3 2200
-#define CO_SENSOR_R1  680
-#define CO_SENSOR_R2  680
-#define CO_SENSOR_R3  6800
+// low side resistances in ohms
+#define NO2_SENSOR_R1 2200L
+#define NO2_SENSOR_R2 16622  // 22000L
+#define NO2_SENSOR_R3 166222 // 220000L
+#define CO_SENSOR_R1  68000L
+#define CO_SENSOR_R2  16622  // 68000L
+#define CO_SENSOR_R3  166222 // 680000L
 
+// divider switchover ADC values
+#define NO2_R1R2R3_THRESHOLD 181L // 388L
+#define NO2_R1R2_THRESHOLD   55L  // 205L
+#define CO_R1R2R3_THRESHOLD  188L // 438L
+#define CO_R1R2_THRESHOLD    125L //160L
 
+#define NO2_VCC_TENTH_VOLTS  25
+#define CO_VCC_TENTH_VOLTS   50
+#define ADC_VCC_TENTH_VOLTS  50
 
 /* Utility constants and prototypes */
 void blinkLEDs(uint8_t n, uint8_t which_led);
@@ -138,8 +146,14 @@ uint8_t uint16_low_byte(uint16_t uint16);
 
 void big_endian_copy_uint32_to_buffer(uint32_t value, uint8_t * buffer);
 
-uint16_t get_r1(uint8_t sensor_index);
-uint16_t get_r2(uint8_t sensor_index);
-uint16_t get_r3(uint8_t sensor_index);
+uint32_t get_r1(uint8_t sensor_index);
+uint32_t get_r2(uint8_t sensor_index);
+uint32_t get_r3(uint8_t sensor_index);
+
+uint16_t get_r1r2r3_threshold(uint8_t sensor_index);
+uint16_t get_r1r2_threshold(uint8_t sensor_index);
+
+uint8_t get_sensor_vcc(uint8_t sensor_index);
+
 
 #endif /* UTILITY_H_ */

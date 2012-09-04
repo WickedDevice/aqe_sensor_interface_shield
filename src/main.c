@@ -17,9 +17,12 @@
 #include "heater_control.h"
 #include "mac.h"
 #include "utility.h"
-#include "math.h"
+#include <math.h>
+#include <limits.h>
 #define __DELAY_BACKWARD_COMPATIBLE__
 #include <util/delay.h>
+
+//#define INCLUDE_DEBUG_REGISTERS
 
 void onRequestService(void);
 void onReceiveService(uint8_t* inBytes, int numBytes);
@@ -67,10 +70,8 @@ void onRequestService(void){
     uint16_t address = egg_bus_get_read_address(); // get the address requested in the SLA+W
     uint16_t sensor_block_relative_address = address - ((uint16_t) EGG_BUS_SENSOR_BLOCK_BASE_ADDRESS);
     uint16_t possible_values[3] = {0,0,0};
-    uint16_t possible_low_side_resistances[3] = {0,0,0};
+    uint32_t possible_low_side_resistances[3] = {0,0,0};
     uint8_t best_value_index = 0;
-    int16_t minimum_distance_to_512 = 1000;
-    int16_t current_distance_to_512 = 1000;
     uint32_t responseValue = 0;
 
     switch(address){
@@ -85,6 +86,7 @@ void onRequestService(void){
     case EGG_BUS_FIRMWARE_VERSION:
         big_endian_copy_uint32_to_buffer(EGG_BUS_FIRMWARE_VERSION_NUMBER, response);
         break;
+#ifdef INCLUDE_DEBUG_REGISTERS
     case EGG_BUS_DEBUG_NO2_HEATER_VOLTAGE_PLUS:
         big_endian_copy_uint32_to_buffer(heater_control_get_heater_power_voltage(0), response);
         break;
@@ -113,6 +115,7 @@ void onRequestService(void){
         big_endian_copy_uint32_to_buffer((uint32_t) digipot_read_status(), response);
         blinkLEDs(1, POWER_LED);
         break;
+#endif
     default:
         if(address >= EGG_BUS_SENSOR_BLOCK_BASE_ADDRESS){
             sensor_index = sensor_block_relative_address / ((uint16_t) EGG_BUS_SENSOR_BLOCK_SIZE);
@@ -156,14 +159,18 @@ void onRequestService(void){
                 possible_values[2] = analogRead(egg_bus_map_to_analog_pin(sensor_index));
                 _delay_ms(10);
 
-                // figure out which sampled value is "closest to 512" and report that
-                for(uint8_t ii = 0; ii < 3; ii++){
-                    current_distance_to_512 = abs((int16_t) possible_values[ii] - (int16_t) 512);
-
-                    if(minimum_distance_to_512 > current_distance_to_512){
-                        minimum_distance_to_512 = current_distance_to_512;
-                        best_value_index = ii;
-                    }
+                // figure out the "best value index" ... here's how this algorithm works:
+                // If the ADC reading when using the R1 + R2 + R3 chain is below THRESHOLD1 use that value
+                // else if the ADC reading when using the R1 + R2 chain is below THRESHOLD2 use that value
+                // else use the ADC reading using the R1 chain
+                if(possible_values[0] < get_r1r2r3_threshold(sensor_index)){
+                    best_value_index = 0;
+                }
+                else if(possible_values[1] < get_r1r2_threshold(sensor_index)){
+                    best_value_index = 1;
+                }
+                else{
+                    best_value_index = 2;
                 }
 
                 if(sensor_field_offset == EGG_BUS_SENSOR_BLOCK_RAW_VALUE_OFFSET){
@@ -172,9 +179,34 @@ void onRequestService(void){
                     big_endian_copy_uint32_to_buffer((uint32_t) possible_low_side_resistances[best_value_index], response + 4 );
                 }
                 else{ // if sensor_field_offset == EGG_BUS_SENSOR_BLOCK_SENSOR_RESISTANCE
-                    responseValue = 1024L - (uint32_t) possible_values[best_value_index];
-                    responseValue *= (uint32_t) possible_low_side_resistances[best_value_index];
-                    responseValue /= (uint32_t) possible_values[best_value_index];
+                    uint32_t a = (((uint32_t) possible_values[best_value_index]) * ((uint32_t) ADC_VCC_TENTH_VOLTS));
+                    uint32_t b = (1024L * ((uint32_t) get_sensor_vcc(sensor_index)));
+                    if(a > b){
+                        responseValue = 0; // short circuit
+                    }
+                    else{
+                        responseValue = b - a;
+
+                        // before we multiply by a potentially large value lets find out if it's going to make us overflow and avert that if possible
+                        if(possible_low_side_resistances[best_value_index] > (((uint32_t) 0xffffffff) / responseValue) ){
+                            if(possible_values[best_value_index] != 0){
+                                responseValue /= ((uint32_t) possible_values[best_value_index]) * ((uint32_t) ADC_VCC_TENTH_VOLTS);
+                                responseValue *= possible_low_side_resistances[best_value_index];
+                            }
+                            else{
+                                responseValue = 0xffffffff; // infinity
+                            }
+                        }
+                        else{
+                            responseValue *= possible_low_side_resistances[best_value_index];
+                            if(possible_values[best_value_index] != 0){
+                                responseValue /= ((uint32_t) possible_values[best_value_index]) * ((uint32_t) ADC_VCC_TENTH_VOLTS);
+                            }
+                            else{
+                                responseValue = 0xffffffff; // infinity
+                            }
+                        }
+                    }
                     big_endian_copy_uint32_to_buffer(responseValue, response);
                 }
 
