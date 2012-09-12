@@ -185,23 +185,29 @@ void onRequestService(void){
                         responseValue = 0; // short circuit
                     }
                     else{
+                        // what we are computing is
+                        // R_SENSOR = R_LOW_SIDE * (1024 * SENSOR_VCC - ADC_VCC * ADC) / (ADC_VCC * SENSOR_VCC * ADC)
+                        //          = R_LOW_SIDE * (b - a) / (ADC_VCC * SENSOR_VCC * ADC)
                         responseValue = b - a;
 
                         // before we multiply by a potentially large value lets find out if it's going to make us overflow and avert that if possible
                         if(possible_low_side_resistances[best_value_index] > (((uint32_t) 0xffffffff) / responseValue) ){
                             if(possible_values[best_value_index] != 0){
-                                responseValue /= ((uint32_t) ADC_VCC_TENTH_VOLTS);
-                                responseValue *= possible_low_side_resistances[best_value_index];
-                                responseValue /= ((uint32_t) possible_values[best_value_index]);
+                                responseValue /= ((uint32_t) ADC_VCC_TENTH_VOLTS);                 // (b - a) / (ADC_VCC)
+                                responseValue *= possible_low_side_resistances[best_value_index];  // R_LOW_SIDE * (b - a) / (ADC_VCC)
+                                responseValue /= ((uint32_t) get_sensor_vcc(sensor_index) *
+                                        ((uint32_t) possible_values[best_value_index]));           // R_LOW_SIDE * (b - a) / (ADC_VCC * ADC * SENSOR_VCC)
                             }
                             else{
                                 responseValue = 0xffffffff; // infinity
                             }
                         }
                         else{
-                            responseValue *= possible_low_side_resistances[best_value_index];
+                            responseValue *= possible_low_side_resistances[best_value_index];      // R_LOW_SIDE * (b - a)
                             if(possible_values[best_value_index] != 0){
-                                responseValue /= ((uint32_t) possible_values[best_value_index]) * ((uint32_t) ADC_VCC_TENTH_VOLTS);
+                                responseValue /= ((uint32_t) possible_values[best_value_index]) *
+                                        ((uint32_t) ADC_VCC_TENTH_VOLTS *
+                                        ((uint32_t) get_sensor_vcc(sensor_index))); // R_LOW_SIDE * (b - a) / (ADC * ADC_VCC * SENSOR_VCC)
                             }
                             else{
                                 responseValue = 0xffffffff; // infinity
