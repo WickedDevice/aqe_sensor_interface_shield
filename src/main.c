@@ -186,8 +186,8 @@ void onRequestService(void){
                     }
                     else{
                         // what we are computing is
-                        // R_SENSOR = R_LOW_SIDE * (1024 * SENSOR_VCC - ADC_VCC * ADC) / (ADC_VCC * SENSOR_VCC * ADC)
-                        //          = R_LOW_SIDE * (b - a) / (ADC_VCC * SENSOR_VCC * ADC)
+                        // R_SENSOR = R_LOW_SIDE * SENSOR_VCC * (1024 * SENSOR_VCC - ADC_VCC * ADC) / (ADC_VCC * SENSOR_VCC * ADC)
+                        //          = R_LOW_SIDE * SENSOR_VCC * (b - a) / (ADC_VCC * SENSOR_VCC * ADC)
                         responseValue = b - a;
 
                         // before we multiply by a potentially large value lets find out if it's going to make us overflow and avert that if possible
@@ -197,6 +197,7 @@ void onRequestService(void){
                                 responseValue *= possible_low_side_resistances[best_value_index];  // R_LOW_SIDE * (b - a) / (ADC_VCC)
                                 responseValue /= ((uint32_t) get_sensor_vcc(sensor_index) *
                                         ((uint32_t) possible_values[best_value_index]));           // R_LOW_SIDE * (b - a) / (ADC_VCC * ADC * SENSOR_VCC)
+                                responseValue *= get_sensor_vcc(sensor_index);                     // R_LOW_SIDE * SENSOR_VCC * (b - a) / (ADC_VCC * ADC * SENSOR_VCC)
                             }
                             else{
                                 responseValue = 0xffffffff; // infinity
@@ -208,6 +209,7 @@ void onRequestService(void){
                                 responseValue /= ((uint32_t) possible_values[best_value_index]) *
                                         ((uint32_t) ADC_VCC_TENTH_VOLTS *
                                         ((uint32_t) get_sensor_vcc(sensor_index))); // R_LOW_SIDE * (b - a) / (ADC * ADC_VCC * SENSOR_VCC)
+                                responseValue *= get_sensor_vcc(sensor_index);
                             }
                             else{
                                 responseValue = 0xffffffff; // infinity
