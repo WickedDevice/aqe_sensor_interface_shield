@@ -9,7 +9,7 @@
 #define UTILITY_H_
 
 /* TWI constants and prototypes */
-#define TWI_SLAVE_ADDRESS               3    // must be less than 127
+#define TWI_SLAVE_ADDRESS               3   // must be less than 127
 #define TWI_BUFFER_SIZE                 8
 #define TWI_GET_NUM_SENSORS_ATTACHED    0x00 // no parameters
 #define TWI_GET_RAW_SENSOR_VALUE        0x11 // parameter = sensor index
@@ -91,51 +91,79 @@
     }while(0)
 
 
-#define SENSOR_R1_DDR  DDRC
-#define SENSOR_R1_PORT PORTC
-#define SENSOR_R1_PIN  7
+#define NO2_R1_DDR  DDRC
+#define NO2_R1_PORT PORTC
+#define NO2_R1_PIN  7
 // GND output
-#define SENSOR_R2_DISABLE() do{ \
-        SENSOR_R1_DDR  |= _BV(SENSOR_R1_PIN);\
-        SENSOR_R1_PORT &= ~_BV(SENSOR_R1_PIN);\
+#define NO2_R2_DISABLE() do{ \
+        NO2_R1_DDR  |= _BV(NO2_R1_PIN);\
+        NO2_R1_PORT &= ~_BV(NO2_R1_PIN);\
     } while(0);
 // high impedance input
-#define SENSOR_R2_ENABLE() do{ \
-        SENSOR_R1_DDR  &= ~_BV(SENSOR_R1_PIN);\
-        SENSOR_R1_PORT &= ~_BV(SENSOR_R1_PIN);\
+#define NO2_R2_ENABLE() do{ \
+        NO2_R1_DDR  &= ~_BV(NO2_R1_PIN);\
+        NO2_R1_PORT &= ~_BV(NO2_R1_PIN);\
     } while(0);
 
-#define SENSOR_R2_DDR  DDRD
-#define SENSOR_R2_PORT PORTD
-#define SENSOR_R2_PIN  1
+#define NO2_R2_DDR  DDRD
+#define NO2_R2_PORT PORTD
+#define NO2_R2_PIN  1
 // GND output
-#define SENSOR_R3_DISABLE() do{ \
-        SENSOR_R2_DDR  |= _BV(SENSOR_R2_PIN);\
-        SENSOR_R2_PORT &= ~_BV(SENSOR_R2_PIN);\
+#define NO2_R3_DISABLE() do{ \
+        NO2_R2_DDR  |= _BV(NO2_R2_PIN);\
+        NO2_R2_PORT &= ~_BV(NO2_R2_PIN);\
     } while(0);
 // high impedance input
-#define SENSOR_R3_ENABLE() do{ \
-        SENSOR_R2_DDR  &= ~_BV(SENSOR_R2_PIN);\
-        SENSOR_R2_PORT &= ~_BV(SENSOR_R2_PIN);\
+#define NO2_R3_ENABLE() do{ \
+        NO2_R2_DDR  &= ~_BV(NO2_R2_PIN);\
+        NO2_R2_PORT &= ~_BV(NO2_R2_PIN);\
+    } while(0);
+
+#define CO_R1_DDR  DDRD
+#define CO_R1_PORT PORTD
+#define CO_R1_PIN  4
+// GND output
+#define CO_R2_DISABLE() do{ \
+        CO_R1_DDR  |= _BV(CO_R1_PIN);\
+        CO_R1_PORT &= ~_BV(CO_R1_PIN);\
+    } while(0);
+// high impedance input
+#define CO_R2_ENABLE() do{ \
+        CO_R1_DDR  &= ~_BV(CO_R1_PIN);\
+        CO_R1_PORT &= ~_BV(CO_R1_PIN);\
+    } while(0);
+
+#define CO_R2_DDR  DDRB
+#define CO_R2_PORT PORTB
+#define CO_R2_PIN  7
+// GND output
+#define CO_R3_DISABLE() do{ \
+        CO_R2_DDR  |= _BV(CO_R2_PIN);\
+        CO_R2_PORT &= ~_BV(CO_R2_PIN);\
+    } while(0);
+// high impedance input
+#define CO_R3_ENABLE() do{ \
+        CO_R2_DDR  &= ~_BV(CO_R2_PIN);\
+        CO_R2_PORT &= ~_BV(CO_R2_PIN);\
     } while(0);
 
 // low side resistances in ohms
 #define NO2_SENSOR_R1 2200L
-#define NO2_SENSOR_R2 16622  // 22000L
-#define NO2_SENSOR_R3 166222 // 220000L
+#define NO2_SENSOR_R2 22000L
+#define NO2_SENSOR_R3 220000L
 #define CO_SENSOR_R1  68000L
-#define CO_SENSOR_R2  16622  // 68000L
-#define CO_SENSOR_R3  166222 // 680000L
+#define CO_SENSOR_R2  68000L
+#define CO_SENSOR_R3  680000L
 
 // divider switchover ADC values
-#define NO2_R1R2R3_THRESHOLD 181L // 388L
-#define NO2_R1R2_THRESHOLD   55L  // 205L
-#define CO_R1R2R3_THRESHOLD  188L // 438L
-#define CO_R1R2_THRESHOLD    125L //160L
+#define NO2_R1R2R3_THRESHOLD   694L // 388L
+#define NO2_R1R2_THRESHOLD     309L // 205L
+#define CO_R1R2R3_THRESHOLD    761L
+#define CO_R1R2_THRESHOLD      363L
 
-#define NO2_VCC_TENTH_VOLTS  25
-#define CO_VCC_TENTH_VOLTS   50
-#define ADC_VCC_TENTH_VOLTS  50
+#define NO2_VCC_TENTH_VOLTS  25L
+#define CO_VCC_TENTH_VOLTS   50L
+#define ADC_VCC_TENTH_VOLTS  50L
 
 /* Utility constants and prototypes */
 void blinkLEDs(uint8_t n, uint8_t which_led);
@@ -154,6 +182,9 @@ uint16_t get_r1r2r3_threshold(uint8_t sensor_index);
 uint16_t get_r1r2_threshold(uint8_t sensor_index);
 
 uint8_t get_sensor_vcc(uint8_t sensor_index);
-
+void SENSOR_R2_ENABLE(uint8_t sensor_index);
+void SENSOR_R3_ENABLE(uint8_t sensor_index);
+void SENSOR_R2_DISABLE(uint8_t sensor_index);
+void SENSOR_R3_DISABLE(uint8_t sensor_index);
 
 #endif /* UTILITY_H_ */

@@ -72,3 +72,39 @@ uint16_t get_r1r2_threshold(uint8_t sensor_index){
 uint8_t get_sensor_vcc(uint8_t sensor_index){
     return sensor_index == 0 ? NO2_VCC_TENTH_VOLTS : CO_VCC_TENTH_VOLTS;
 }
+
+void SENSOR_R2_ENABLE(uint8_t sensor_index){
+    if(sensor_index == 0){
+        NO2_R2_ENABLE();
+    }
+    else{
+        CO_R2_ENABLE();
+    }
+}
+
+void SENSOR_R3_ENABLE(uint8_t sensor_index){
+    if(sensor_index == 0){
+        NO2_R3_ENABLE();
+    }
+    else{
+        CO_R3_ENABLE();
+    }
+}
+
+void SENSOR_R2_DISABLE(uint8_t sensor_index){
+    if(sensor_index == 0){
+        NO2_R2_DISABLE();
+    }
+    else{
+        CO_R2_DISABLE();
+    }
+}
+
+void SENSOR_R3_DISABLE(uint8_t sensor_index){
+    if(sensor_index == 0){
+        NO2_R3_DISABLE();
+    }
+    else{
+        CO_R3_DISABLE();
+    }
+}

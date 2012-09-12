@@ -24,8 +24,8 @@ PGM_P egg_bus_sensor_types[] PROGMEM = {
         egg_bus_sensor_type_1
 };
 
-char egg_bus_sensor_units_0[] PROGMEM = "ppm";
-char egg_bus_sensor_units_1[] PROGMEM = "ppm";
+char egg_bus_sensor_units_0[] PROGMEM = "ohms";
+char egg_bus_sensor_units_1[] PROGMEM = "ohms";
 PGM_P egg_bus_sensor_units[] PROGMEM = {
         egg_bus_sensor_units_0,
         egg_bus_sensor_units_1
