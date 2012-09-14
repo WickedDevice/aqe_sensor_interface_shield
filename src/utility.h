@@ -156,8 +156,8 @@
 #define CO_SENSOR_R3  680000L
 
 // divider switchover ADC values
-#define NO2_R1R2R3_THRESHOLD   840L // 388L
-#define NO2_R1R2_THRESHOLD     593L // 205L
+#define NO2_R1R2R3_THRESHOLD   415L // 388L
+#define NO2_R1R2_THRESHOLD     226L // 205L
 #define CO_R1R2R3_THRESHOLD    761L
 #define CO_R1R2_THRESHOLD      363L
 
