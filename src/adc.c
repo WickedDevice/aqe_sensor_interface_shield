@@ -6,6 +6,8 @@
  */
 #include <stdint.h>
 #include <avr/io.h>
+#define __DELAY_BACKWARD_COMPATIBLE__
+#include <util/delay.h>
 #include "adc.h"
 
 #ifndef cbi

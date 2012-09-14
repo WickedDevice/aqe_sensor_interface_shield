@@ -18,4 +18,6 @@
 #define CO_HEATER_FEEDBACK_RESISTANCE 10L // ohms
 #define CO_HEATER_TARGET_POWER_MW  76L // mW
 
+uint16_t averageADC(uint8_t sensor_index);
+
 #endif /* MAIN_H_ */

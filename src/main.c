@@ -146,18 +146,19 @@ void onRequestService(void){
                 // R2 and R3 enabled
                 SENSOR_R2_ENABLE(sensor_index);
                 SENSOR_R3_ENABLE(sensor_index);
-                _delay_ms(20);
-                possible_values[0] = analogRead(egg_bus_map_to_analog_pin(sensor_index));
+                _delay_ms(10);
+                possible_values[0] = averageADC(sensor_index);
+
 
                 // R3 disabled
                 SENSOR_R3_DISABLE(sensor_index);
-                _delay_ms(20);
-                possible_values[1] = analogRead(egg_bus_map_to_analog_pin(sensor_index));
+                _delay_ms(10);
+                possible_values[1] = averageADC(sensor_index);
 
                 // R2 and R3 disabled
                 SENSOR_R2_DISABLE(sensor_index);
-                _delay_ms(20);
-                possible_values[2] = analogRead(egg_bus_map_to_analog_pin(sensor_index));
+                _delay_ms(10);
+                possible_values[2] = averageADC(sensor_index);
 
                 // figure out the "best value index" ... here's how this algorithm works:
                 // If the ADC reading when using the R1 + R2 + R3 chain is below THRESHOLD1 use that value
@@ -179,7 +180,7 @@ void onRequestService(void){
                     big_endian_copy_uint32_to_buffer((uint32_t) possible_low_side_resistances[best_value_index], response + 4 );
                 }
                 else{ // if sensor_field_offset == EGG_BUS_SENSOR_BLOCK_SENSOR_RESISTANCE
-                    uint32_t a = (((uint32_t) possible_values[best_value_index]) * ((uint32_t) ADC_VCC_TENTH_VOLTS)); // VCC * ADC
+                    uint32_t a = ((uint32_t) possible_values[best_value_index]) *  ADC_VCC_TENTH_VOLTS; // ADC_VCC * ADC
                     uint32_t b = (1024L * ((uint32_t) get_sensor_vcc(sensor_index))); // 1024 * SENSOR_VCC
                     if(a > b){
                         responseValue = 0; // short circuit
@@ -204,12 +205,12 @@ void onRequestService(void){
                             }
                         }
                         else{
-                            responseValue *= possible_low_side_resistances[best_value_index];      // R_LOW_SIDE * (b - a)
+                            responseValue *= possible_low_side_resistances[best_value_index];        // R_LOW_SIDE * (b - a)
                             if(possible_values[best_value_index] != 0){
                                 responseValue /= ((uint32_t) possible_values[best_value_index]) *
                                         ((uint32_t) ADC_VCC_TENTH_VOLTS *
-                                        ((uint32_t) get_sensor_vcc(sensor_index))); // R_LOW_SIDE * (b - a) / (ADC * ADC_VCC * SENSOR_VCC)
-                                responseValue *= get_sensor_vcc(sensor_index);
+                                        ((uint32_t) get_sensor_vcc(sensor_index)));                // R_LOW_SIDE * (b - a) / (ADC * ADC_VCC * SENSOR_VCC)
+                                responseValue *= get_sensor_vcc(sensor_index);                     // R_LOW_SIDE * SENSOR_VCC * (b - a) / (ADC * ADC_VCC * SENSOR_VCC)
                             }
                             else{
                                 responseValue = 0xffffffff; // infinity
@@ -282,3 +283,12 @@ void setup(void){
     STATUS_LED_OFF();
 }
 
+#define NUM_ADC_READINGS_TO_AVERAGE 100L
+uint16_t averageADC(uint8_t sensor_index){
+    uint32_t ret = 0;
+    for(uint8_t ii = 0; ii < NUM_ADC_READINGS_TO_AVERAGE; ii++){
+        ret += analogRead(egg_bus_map_to_analog_pin(sensor_index));
+    }
+
+    return (uint16_t) (ret / NUM_ADC_READINGS_TO_AVERAGE);
+}
