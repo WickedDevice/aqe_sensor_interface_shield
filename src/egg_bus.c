@@ -24,14 +24,14 @@ PGM_P egg_bus_sensor_types[] PROGMEM = {
         egg_bus_sensor_type_1
 };
 
-char egg_bus_sensor_units_0[] PROGMEM = "ohms";
-char egg_bus_sensor_units_1[] PROGMEM = "ohms";
+char egg_bus_sensor_units_0[] PROGMEM = "ppb";
+char egg_bus_sensor_units_1[] PROGMEM = "ppb";
 PGM_P egg_bus_sensor_units[] PROGMEM = {
         egg_bus_sensor_units_0,
         egg_bus_sensor_units_1
 };
 
-uint16_t EEMEM egg_bus_sensor_r0[EGG_BUS_NUM_HOSTED_SENSORS]  = { 2200, 750}; // values in ohms
+uint32_t EEMEM egg_bus_sensor_r0[EGG_BUS_NUM_HOSTED_SENSORS]  = { 2200, 750000 }; // values in ohms
 
 uint16_t egg_bus_get_read_address(){
     return egg_bus_read_address;

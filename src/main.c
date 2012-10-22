@@ -8,6 +8,7 @@
 #include <avr/interrupt.h>
 #include <stdint.h>
 #include <string.h>
+#include "utility.h"
 #include "main.h"
 #include "twi.h"
 #include "spi.h"
@@ -16,7 +17,7 @@
 #include "digipot.h"
 #include "heater_control.h"
 #include "mac.h"
-#include "utility.h"
+#include "interpolation.h"
 #include <math.h>
 #include <limits.h>
 #define __DELAY_BACKWARD_COMPATIBLE__
@@ -73,7 +74,7 @@ void onRequestService(void){
     uint32_t possible_low_side_resistances[3] = {0,0,0};
     uint8_t best_value_index = 0;
     uint32_t responseValue = 0;
-
+    uint32_t temp = 0;
     switch(address){
     case EGG_BUS_ADDRESS_SENSOR_COUNT:
         response[0] = EGG_BUS_NUM_HOSTED_SENSORS;
@@ -132,13 +133,20 @@ void onRequestService(void){
             case EGG_BUS_SENSOR_BLOCK_R0_OFFSET:
                 big_endian_copy_uint32_to_buffer(egg_bus_get_r0_ohms(sensor_index), response);
                 break;
-            case EGG_BUS_SENSOR_BLOCK_COMPUTED_VALUE_OFFSET: //
-                big_endian_copy_uint32_to_buffer((uint32_t) analogRead(egg_bus_map_to_analog_pin(sensor_index)), response);
+            case EGG_BUS_SENSOR_BLOCK_TABLE_X_SCALER_OFFSET:
+                memcpy(&responseValue, get_p_x_scaler(sensor_index), 4);
+                big_endian_copy_uint32_to_buffer(responseValue, response);
                 break;
-            case EGG_BUS_SENSOR_BLOCK_UNITS_MULTIPLIER_OFFSET:
+            case EGG_BUS_SENSOR_BLOCK_TABLE_Y_SCALER_OFFSET:
+                memcpy(&responseValue, get_p_y_scaler(sensor_index), 4);
+                big_endian_copy_uint32_to_buffer(responseValue, response);
                 break;
+            case EGG_BUS_SENSOR_BLOCK_MEASURED_INDEPENDENT_SCALER_OFFSET:
+                memcpy(&responseValue, get_p_independent_scaler(sensor_index), 4);
+                big_endian_copy_uint32_to_buffer(responseValue, response);
+                break;
+            case EGG_BUS_SENSOR_BLOCK_MEASURED_INDEPENDENT_OFFSET:
             case EGG_BUS_SENSOR_BLOCK_RAW_VALUE_OFFSET:
-            case EGG_BUS_SENSOR_BLOCK_SENSOR_RESISTANCE:
                 possible_low_side_resistances[0] = get_r1(sensor_index) + get_r2(sensor_index) + get_r3(sensor_index);
                 possible_low_side_resistances[1] = get_r1(sensor_index) + get_r2(sensor_index);
                 possible_low_side_resistances[2] = get_r1(sensor_index);
@@ -148,7 +156,6 @@ void onRequestService(void){
                 SENSOR_R3_ENABLE(sensor_index);
                 _delay_ms(10);
                 possible_values[0] = averageADC(sensor_index);
-
 
                 // R3 disabled
                 SENSOR_R3_DISABLE(sensor_index);
@@ -179,7 +186,8 @@ void onRequestService(void){
                     big_endian_copy_uint32_to_buffer((uint32_t) possible_values[best_value_index], response);
                     big_endian_copy_uint32_to_buffer((uint32_t) possible_low_side_resistances[best_value_index], response + 4 );
                 }
-                else{ // if sensor_field_offset == EGG_BUS_SENSOR_BLOCK_SENSOR_RESISTANCE
+                else{ // if sensor_field_offset == EGG_BUS_SENSOR_BLOCK_MEASURED_INDEPENDENT
+                      // in either case ... calculate the resistance
                     uint32_t a = ((uint32_t) possible_values[best_value_index]) *  ADC_VCC_TENTH_VOLTS; // ADC_VCC * ADC
                     uint32_t b = (1024L * ((uint32_t) get_sensor_vcc(sensor_index))); // 1024 * SENSOR_VCC
                     if(a > b){
@@ -217,8 +225,29 @@ void onRequestService(void){
                             }
                         }
                     }
+
+                    // the independent variable in either case is R_Sensed / R0
+                    //float_response = ((1.0 * responseValue) / egg_bus_get_r0_ohms(sensor_index));
+                    temp = responseValue;
+                    responseValue *= get_independent_scaler_inverse(sensor_index);
+                    if(temp > responseValue){
+                        // overflow the independent variable should be returned as big as possible
+                        responseValue = 0xffffffff; // infinity
+                    }
+                    else{
+                        responseValue /= egg_bus_get_r0_ohms(sensor_index);
+                    }
                     big_endian_copy_uint32_to_buffer(responseValue, response);
                 }
+
+                break;
+            default: // assume its an access to the mapping table entries
+                sensor_block_relative_address = (sensor_field_offset - EGG_BUS_SENSOR_BLOCK_COMPUTED_VALUE_MAPPING_TABLE_BASE_OFFSET);
+                sensor_block_relative_address >>= 3; // divide by eight - now it is the mapping table index
+                response_length = 2;
+
+                *(response)   = getTableValue(sensor_index, sensor_block_relative_address, 0);
+                *(response+1) = getTableValue(sensor_index, sensor_block_relative_address, 1);
 
                 break;
             }
