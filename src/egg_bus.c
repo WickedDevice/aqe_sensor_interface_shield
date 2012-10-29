@@ -62,3 +62,7 @@ uint32_t egg_bus_get_r0_ohms(uint8_t sensor_index){
     eeprom_read_block (( void *) &ret_value , ( const void *) (&egg_bus_sensor_r0[sensor_index]) , 4) ;
     return ret_value;
 }
+
+void egg_bus_set_r0_ohms(uint8_t sensor_index, uint32_t value){
+    eeprom_write_block(&value, &egg_bus_sensor_r0[sensor_index], 4);
+}

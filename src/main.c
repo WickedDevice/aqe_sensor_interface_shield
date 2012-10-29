@@ -264,14 +264,41 @@ void onRequestService(void){
 //   numBytes bytes have been buffered in inBytes by the twi library
 // it seems quite critical that we not dilly-dally in this function, get in and get out ASAP
 void onReceiveService(uint8_t* inBytes, int numBytes){
+    uint8_t command = inBytes[0];
+    uint16_t address = (((uint16_t) inBytes[1]) << 8) | inBytes[2];
+    uint32_t value = 0;
+    uint8_t sensor_index = 0;
+    uint8_t sensor_field_offset = 0;
+    uint16_t sensor_block_relative_address = address - ((uint16_t) EGG_BUS_SENSOR_BLOCK_BASE_ADDRESS);
+    uint8_t ii = 0;
+
     POWER_LED_TOGGLE();
-    switch(inBytes[0]){
+    switch(command){
     case EGG_BUS_COMMAND_READ:
-        // reconstitute the read address
-        egg_bus_set_read_address((((uint16_t) inBytes[1]) << 8) | inBytes[2]);
+        egg_bus_set_read_address(address);
         break;
     case EGG_BUS_COMMAND_WRITE:
-        // TODO: not yet implemented
+        // The write command always has a 2-byte address
+        // then the data in big-endian byte order
+        // so numBytes must be at least 4 (command, address high, address low, value byte N-1, ..., value byte 0)
+        if(address >= EGG_BUS_SENSOR_BLOCK_BASE_ADDRESS){
+            sensor_index = sensor_block_relative_address / ((uint16_t) EGG_BUS_SENSOR_BLOCK_SIZE);
+            sensor_field_offset = sensor_block_relative_address % ((uint16_t) EGG_BUS_SENSOR_BLOCK_SIZE);
+            switch(sensor_field_offset){
+            case EGG_BUS_SENSOR_BLOCK_R0_OFFSET:
+                // rebuild the value
+                value = inBytes[3];
+                for(ii = 4; ii < 7; ii++){
+                    value <<= 8;
+                    value |= inBytes[ii];
+                }
+
+                // store the value
+                egg_bus_set_r0_ohms(sensor_index, value);
+                break;
+            }
+        }
+
         break;
     }
 }

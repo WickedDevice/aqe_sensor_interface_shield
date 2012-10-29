@@ -19,7 +19,7 @@
 
 /* Sensor Module Memory Map Definition */
 
-#define EGG_BUS_FIRMWARE_VERSION_NUMBER   0x00000002
+#define EGG_BUS_FIRMWARE_VERSION_NUMBER   0x00000003
 
 // Header Definitions
 #define EGG_BUS_ADDRESS_SENSOR_COUNT      0
@@ -57,5 +57,6 @@ void egg_bus_set_read_address(uint16_t read_address);
 void egg_bus_get_sensor_type(uint8_t sensor_index, char * target_buffer);
 void egg_bus_get_sensor_units(uint8_t sensor_index, char * target_buffer);
 uint32_t egg_bus_get_r0_ohms(uint8_t sensor_index);
+void egg_bus_set_r0_ohms(uint8_t sensor_index, uint32_t value);
 
 #endif /* EGG_BUS_H_ */
