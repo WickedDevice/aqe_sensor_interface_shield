@@ -40,12 +40,12 @@ uint16_t analogRead(uint8_t channel_num){
     // Set the ADC Prescaler  bitfield (ADPS2:0) in ADCSRA equal to 100 to prescale system clock by 8.
     // By default, the successive approximation circuitry requires an input clock frequency between 50
     // kHz and 200 kHz to get maximum resolution, per the ATtin48 datasheet.
-    // Since we're assuming running @ 1MHz, 1MHz/8 = 125kHz is in the required range
-    // the following evaluates to ADCSRA & 0xF8
+    // Since we're assuming running @ 8MHz, 8MHz/64 = 125kHz is in the required range of 50kHz to 200kHz
+    // the following evaluates to ADCSRA & 0xF8 (clear the prescaler bits)
     temp = ADCSRA & ~(_BV(ADPS0) | _BV(ADPS1) | _BV(ADPS2));
 
-    // choose the channel requested
-    temp |= channel_num & (_BV(ADPS0) | _BV(ADPS1) | _BV(ADPS2)); // prevent the channel num from affecting other bits
+    // set the bits for /64 prescaler
+    temp |= _BV(ADPS1) | _BV(ADPS2);
 
     // enable the ADC
     temp |= _BV(ADEN);
