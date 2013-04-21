@@ -73,6 +73,10 @@ uint8_t get_sensor_vcc(uint8_t sensor_index){
     return sensor_index == 0 ? NO2_VCC_TENTH_VOLTS : CO_VCC_TENTH_VOLTS;
 }
 
+uint16_t get_sensor_min_adc_high_r(uint8_t sensor_index){
+    return sensor_index == 0 ? NO2_MIN_ADC_HIGH_R : CO_MIN_ADC_HIGH_R;
+}
+
 void SENSOR_R2_ENABLE(uint8_t sensor_index){
     if(sensor_index == 0){
         NO2_R2_ENABLE();

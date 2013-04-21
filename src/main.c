@@ -34,31 +34,26 @@ uint8_t macaddr[6];
 
 void main(void) __attribute__((noreturn));
 void main(void) {
-    uint8_t momentum[2] = {1, 1};
-    int8_t last_direction[2] = {0,0};
+
+    uint16_t ii = 0;
 
     setup();
+
+    digipot_increment(DIGIPOT_WIPER1, 255);
+    digipot_increment(DIGIPOT_WIPER0, 255);
+
+    for(ii = 0; ii < 174; ii++){
+        digipot_decrement(DIGIPOT_WIPER0, 1);
+    }
+
+    for(ii = 0; ii < 200; ii++){
+        digipot_decrement(DIGIPOT_WIPER1, 1);
+    }
+
     sei();    // enable interrupts
 
-    // This loop runs forever, its sole purpose is to keep the heater power constant
-    // it can be interrupted at any point by a TWI event
-    for (;;) {
-        for(uint8_t ii = 0; ii < EGG_BUS_NUM_HOSTED_SENSORS; ii++){
-            int8_t direction = heater_control_manage(ii, momentum[ii]) > 0 ? 1 : -1;
+    for(;;){
 
-            if(direction == last_direction[ii] && direction != 0){
-                momentum[ii] += 1; // change faster
-            }
-            else{
-                momentum[ii] = 1; // reset to slow changes
-            }
-
-            if(direction != 0){
-                last_direction[ii] = direction;
-            }
-        }
-
-        delay_sec(3); // only change the heater voltage every three seconds or so to give it time to settle in
     }
 }
 
@@ -167,79 +162,74 @@ void onRequestService(void){
                 _delay_ms(10);
                 possible_values[2] = averageADC(sensor_index);
 
-                // figure out the "best value index" ... here's how this algorithm works:
-                // If the ADC reading when using the R1 + R2 + R3 chain is below THRESHOLD1 use that value
-                // else if the ADC reading when using the R1 + R2 chain is below THRESHOLD2 use that value
-                // else use the ADC reading using the R1 chain
-                if(possible_values[0] < get_r1r2r3_threshold(sensor_index)){
-                    best_value_index = 0;
-                }
-                else if(possible_values[1] < get_r1r2_threshold(sensor_index)){
-                    best_value_index = 1;
+                // i'm going to abuse some variables to save space here
+                temp  = ((1024L * get_sensor_vcc(sensor_index)) / ADC_VCC_TENTH_VOLTS) / 2L; //midrange_adc_value
+                responseValue = temp > possible_values[0] ? temp - possible_values[0] : possible_values[0] - temp; // responseValue = abs(adc_midpoint - adc[0])
+                if(min32(responseValue, temp > possible_values[1] ? temp - possible_values[1] : possible_values[1] - temp) == responseValue){
+                    best_value_index =  0;
                 }
                 else{
+                    best_value_index = 1;
+                    responseValue = temp > possible_values[1] ? temp - possible_values[0] : possible_values[1] - temp; // responseValue = abs(adc_midpoint - adc[1])
+                }
+
+                // responseValue is the smaller difference to the midpoint between adc[0] and adc[1]
+                if(min32(responseValue, temp > possible_values[2] ? temp - possible_values[2] : possible_values[2] - temp) != responseValue){
                     best_value_index = 2;
                 }
 
                 if(sensor_field_offset == EGG_BUS_SENSOR_BLOCK_RAW_VALUE_OFFSET){
                     response_length = 8;
+                    //the following returns the best value and the associated low side resistance
                     big_endian_copy_uint32_to_buffer((uint32_t) possible_values[best_value_index], response);
                     big_endian_copy_uint32_to_buffer((uint32_t) possible_low_side_resistances[best_value_index], response + 4 );
+
+                    //the following returns the three ADC values and the algorithmic selection of the best one's index
+                    //responseValue = ((uint32_t)possible_values[0]) << 16;
+                    //responseValue |= possible_values[1];
+                    //big_endian_copy_uint32_to_buffer(responseValue, response);
+                    //responseValue = ((uint32_t)possible_values[2]) << 16;
+                    //responseValue |= best_value_index;
+                    //big_endian_copy_uint32_to_buffer(responseValue, response + 4);
+
                 }
                 else{ // if sensor_field_offset == EGG_BUS_SENSOR_BLOCK_MEASURED_INDEPENDENT
-                      // in either case ... calculate the resistance
-                    uint32_t a = ((uint32_t) possible_values[best_value_index]) *  ADC_VCC_TENTH_VOLTS; // ADC_VCC * ADC
-                    uint32_t b = (1024L * ((uint32_t) get_sensor_vcc(sensor_index))); // 1024 * SENSOR_VCC
-                    if(a > b){
-                        responseValue = 0; // short circuit
+                    if(possible_values[best_value_index] == 0){ // open circuit condition
+                        responseValue = 0xffffffff;
+                    }
+                    else if(best_value_index == 0 && possible_values[best_value_index] < get_sensor_min_adc_high_r(sensor_index)){ // resistance too large
+                        responseValue = 0xfffffffe;
                     }
                     else{
-                        // what we are computing is
-                        // R_SENSOR = R_LOW_SIDE * SENSOR_VCC * (1024 * SENSOR_VCC - ADC_VCC * ADC) / (ADC_VCC * SENSOR_VCC * ADC)
-                        //          = R_LOW_SIDE * SENSOR_VCC * (b - a) / (ADC_VCC * SENSOR_VCC * ADC)
-                        responseValue = b - a;
+                        // calculate the resistance
+                        // (sensor_vcc - sensor_v) * R_low / sensor_v = R_sensor
 
-                        // before we multiply by a potentially large value lets find out if it's going to make us overflow and avert that if possible
-                        if(possible_low_side_resistances[best_value_index] > (((uint32_t) 0xffffffff) / responseValue) ){
-                            if(possible_values[best_value_index] != 0){
-                                responseValue /= ((uint32_t) ADC_VCC_TENTH_VOLTS);                 // (b - a) / (ADC_VCC)
-                                responseValue *= possible_low_side_resistances[best_value_index];  // R_LOW_SIDE * (b - a) / (ADC_VCC)
-                                responseValue /= ((uint32_t) get_sensor_vcc(sensor_index) *
-                                        ((uint32_t) possible_values[best_value_index]));           // R_LOW_SIDE * (b - a) / (ADC_VCC * ADC * SENSOR_VCC)
-                                responseValue *= get_sensor_vcc(sensor_index);                     // R_LOW_SIDE * SENSOR_VCC * (b - a) / (ADC_VCC * ADC * SENSOR_VCC)
-                            }
-                            else{
-                                responseValue = 0xffffffff; // infinity
-                            }
-                        }
-                        else{
-                            responseValue *= possible_low_side_resistances[best_value_index];        // R_LOW_SIDE * (b - a)
-                            if(possible_values[best_value_index] != 0){
-                                responseValue /= ((uint32_t) possible_values[best_value_index]) *
-                                        ((uint32_t) ADC_VCC_TENTH_VOLTS *
-                                        ((uint32_t) get_sensor_vcc(sensor_index)));                // R_LOW_SIDE * (b - a) / (ADC * ADC_VCC * SENSOR_VCC)
-                                responseValue *= get_sensor_vcc(sensor_index);                     // R_LOW_SIDE * SENSOR_VCC * (b - a) / (ADC * ADC_VCC * SENSOR_VCC)
-                            }
-                            else{
-                                responseValue = 0xffffffff; // infinity
-                            }
-                        }
-                    }
+                        responseValue = ADC_VCC_TENTH_VOLTS * possible_values[best_value_index];
+                        responseValue /= 1024L;
 
-                    // the independent variable in either case is R_Sensed / R0
-                    //float_response = ((1.0 * responseValue) / egg_bus_get_r0_ohms(sensor_index));
-                    temp = responseValue;
-                    responseValue *= get_independent_scaler_inverse(sensor_index);
-                    if(temp > responseValue){
-                        // overflow the independent variable should be returned as big as possible
-                        responseValue = 0xffffffff; // infinity
-                    }
-                    else{
+                        // now responseValue is the sensor voltage in tenths of a volt
+
+                        temp = responseValue; // save sensor voltage for later
+
+                        responseValue = get_sensor_vcc(sensor_index) - temp;
+
+                        // now responseValue is the parenthetical numerator term
+
+                        responseValue *= possible_low_side_resistances[best_value_index];
+
+                        // now responseValue is the actual numerator
+
+                        responseValue /= temp;
+
+                        // now responseValue is the measured resistance
+
+                        temp = responseValue;
+                        responseValue *= get_independent_scaler_inverse(sensor_index);
                         responseValue /= egg_bus_get_r0_ohms(sensor_index);
                     }
+
                     big_endian_copy_uint32_to_buffer(responseValue, response);
                 }
-
                 break;
             default: // assume its an access to the mapping table entries
                 sensor_block_relative_address = (sensor_field_offset - EGG_BUS_SENSOR_BLOCK_COMPUTED_VALUE_MAPPING_TABLE_BASE_OFFSET);
@@ -347,4 +337,8 @@ uint16_t averageADC(uint8_t sensor_index){
     }
 
     return (uint16_t) (ret / NUM_ADC_READINGS_TO_AVERAGE);
+}
+
+uint32_t min32(uint32_t x, uint32_t y){
+    return (x < y) ? x : y;
 }

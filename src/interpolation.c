@@ -16,8 +16,8 @@
 // these are the conversion factors required to turn into floating point values (multiply table values by these)
 const float x_scaler[EGG_BUS_NUM_HOSTED_SENSORS] = {0.4f, 0.003f};
 const float y_scaler[EGG_BUS_NUM_HOSTED_SENSORS] = {1.7f, 165.0f};
-const float independent_scaler[EGG_BUS_NUM_HOSTED_SENSORS] = {0.0001f, 0.0004f};
-const uint32_t independent_scaler_inverse[EGG_BUS_NUM_HOSTED_SENSORS] = { 10000, 2500 };
+const float independent_scaler[EGG_BUS_NUM_HOSTED_SENSORS] = {0.001f, 0.001f};
+const uint32_t independent_scaler_inverse[EGG_BUS_NUM_HOSTED_SENSORS] = { 1000L, 1000L };
 
 // get_x_or_get_y = 0 returns x value from table, get_x_or_get_y = 1 returns y value from table
 uint8_t getTableValue(uint8_t sensor_index, uint8_t table_index, uint8_t get_x_or_get_y){
