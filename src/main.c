@@ -178,10 +178,6 @@ void onRequestService(void){
                     best_value_index = 2;
                 }
 
-                possible_values[best_value_index] = 342;
-                possible_low_side_resistances[best_value_index] = 244200L;
-
-
                 if(sensor_field_offset == EGG_BUS_SENSOR_BLOCK_RAW_VALUE_OFFSET){
                     response_length = 8;
                     //the following returns the best value and the associated low side resistance
