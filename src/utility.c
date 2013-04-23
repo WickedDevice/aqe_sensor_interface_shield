@@ -69,7 +69,7 @@ uint16_t get_r1r2_threshold(uint8_t sensor_index){
     return sensor_index == 0 ? NO2_R1R2_THRESHOLD : CO_R1R2_THRESHOLD;
 }
 
-uint8_t get_sensor_vcc(uint8_t sensor_index){
+uint32_t get_sensor_vcc(uint8_t sensor_index){
     return sensor_index == 0 ? NO2_VCC_TENTH_VOLTS : CO_VCC_TENTH_VOLTS;
 }
 

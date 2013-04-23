@@ -150,7 +150,7 @@
 // low side resistances in ohms
 #define NO2_SENSOR_R1 2200L
 #define NO2_SENSOR_R2 0L
-#define NO2_SENSOR_R3 220000L
+#define NO2_SENSOR_R3 242000L
 #define CO_SENSOR_R1  68000L
 #define CO_SENSOR_R2  68000L
 #define CO_SENSOR_R3  680000L
@@ -161,12 +161,12 @@
 #define CO_R1R2R3_THRESHOLD    761L
 #define CO_R1R2_THRESHOLD      363L
 
-#define NO2_VCC_TENTH_VOLTS  25L
-#define CO_VCC_TENTH_VOLTS   50L
-#define ADC_VCC_TENTH_VOLTS  50L
+#define NO2_VCC_TENTH_VOLTS  2500L
+#define CO_VCC_TENTH_VOLTS   5000L
+#define ADC_VCC_TENTH_VOLTS  5000L
 
-#define NO2_MIN_ADC_HIGH_R   67
-#define CO_MIN_ADC_HIGH_R    360
+#define NO2_MIN_ADC_HIGH_R   (36)
+#define CO_MIN_ADC_HIGH_R    (360)
 
 /* Utility constants and prototypes */
 void blinkLEDs(uint8_t n, uint8_t which_led);
@@ -184,7 +184,7 @@ uint32_t get_r3(uint8_t sensor_index);
 uint16_t get_r1r2r3_threshold(uint8_t sensor_index);
 uint16_t get_r1r2_threshold(uint8_t sensor_index);
 
-uint8_t get_sensor_vcc(uint8_t sensor_index);
+uint32_t get_sensor_vcc(uint8_t sensor_index);
 uint16_t get_sensor_min_adc_high_r(uint8_t sensor_index);
 void SENSOR_R2_ENABLE(uint8_t sensor_index);
 void SENSOR_R3_ENABLE(uint8_t sensor_index);
