@@ -59,7 +59,7 @@ void main(void) {
 
 // this gets called when you get an SLA+R
 void onRequestService(void){
-    uint8_t response[EGG_BUS_MAX_RESPONSE_LENGTH] = { 0 };
+    static uint8_t response[EGG_BUS_MAX_RESPONSE_LENGTH] = { 0 };
     uint8_t response_length = 4; // unless it gets overridden 4 is the default
     uint8_t sensor_index = 0;
     uint8_t sensor_field_offset = 0;
@@ -179,10 +179,13 @@ void onRequestService(void){
                 }
 
                 if(sensor_field_offset == EGG_BUS_SENSOR_BLOCK_RAW_VALUE_OFFSET){
-                    response_length = 8;
+                    response_length = 20;
                     //the following returns the best value and the associated low side resistance
                     big_endian_copy_uint32_to_buffer((uint32_t) possible_values[best_value_index], response);
                     big_endian_copy_uint32_to_buffer((uint32_t) possible_low_side_resistances[best_value_index], response + 4 );
+                    big_endian_copy_uint32_to_buffer((uint32_t) get_sensor_vcc(sensor_index), response + 8 );
+                    big_endian_copy_uint32_to_buffer((uint32_t) ADC_VCC_TENTH_VOLTS, response + 12 );
+                    big_endian_copy_uint32_to_buffer((uint32_t) 1024, response + 16 );
 
                     //the following returns the three ADC values and the algorithmic selection of the best one's index
                     //responseValue = ((uint32_t)possible_values[0]) << 16;
@@ -193,44 +196,44 @@ void onRequestService(void){
                     //big_endian_copy_uint32_to_buffer(responseValue, response + 4);
 
                 }
-                else{ // if sensor_field_offset == EGG_BUS_SENSOR_BLOCK_MEASURED_INDEPENDENT
-
-                    if(possible_values[best_value_index] == 0){ // open circuit condition
-                        responseValue = 0xffffffff;
-                    }
-                    else if(best_value_index == 0 && possible_values[best_value_index] < get_sensor_min_adc_high_r(sensor_index)){ // resistance too large
-                        responseValue = 0xfffffffe;
-                    }
-                    else{
-                        // calculate the resistance
-                        // (sensor_vcc - sensor_v) * R_low / sensor_v = R_sensor
-
-                        responseValue = ADC_VCC_TENTH_VOLTS * possible_values[best_value_index];
-                        responseValue /= 1024L;
-
-                        // now responseValue is the sensor voltage in tenths of a volt
-
-                        temp = responseValue; // save sensor voltage for later
-
-                        responseValue = get_sensor_vcc(sensor_index) - temp;
-
-                        // now responseValue is the parenthetical numerator term
-
-                        responseValue *= possible_low_side_resistances[best_value_index];
-
-                        // now responseValue is the actual numerator
-
-                        responseValue /= temp;
-
-                        // now responseValue is the measured resistance
-
-                        temp = responseValue;
-                        responseValue *= get_independent_scaler_inverse(sensor_index);
-                        responseValue /= egg_bus_get_r0_ohms(sensor_index);
-                    }
-
-                    big_endian_copy_uint32_to_buffer(responseValue, response);
-                }
+//                else{ // if sensor_field_offset == EGG_BUS_SENSOR_BLOCK_MEASURED_INDEPENDENT
+//
+//                    if(possible_values[best_value_index] == 0){ // open circuit condition
+//                        responseValue = 0xffffffff;
+//                    }
+//                    else if(best_value_index == 0 && possible_values[best_value_index] < get_sensor_min_adc_high_r(sensor_index)){ // resistance too large
+//                        responseValue = 0xfffffffe;
+//                    }
+//                    else{
+//                        // calculate the resistance
+//                        // (sensor_vcc - sensor_v) * R_low / sensor_v = R_sensor
+//
+//                        responseValue = ADC_VCC_TENTH_VOLTS * possible_values[best_value_index];
+//                        responseValue /= 1024L;
+//
+//                        // now responseValue is the sensor voltage in tenths of a volt
+//
+//                        temp = responseValue; // save sensor voltage for later
+//
+//                        responseValue = get_sensor_vcc(sensor_index) - temp;
+//
+//                        // now responseValue is the parenthetical numerator term
+//
+//                        responseValue *= possible_low_side_resistances[best_value_index];
+//
+//                        // now responseValue is the actual numerator
+//
+//                        responseValue /= temp;
+//
+//                        // now responseValue is the measured resistance
+//
+//                        temp = responseValue;
+//                        responseValue *= get_independent_scaler_inverse(sensor_index);
+//                        responseValue /= egg_bus_get_r0_ohms(sensor_index);
+//                    }
+//
+//                    big_endian_copy_uint32_to_buffer(responseValue, response);
+//                }
                 break;
             default: // assume its an access to the mapping table entries
                 sensor_block_relative_address = (sensor_field_offset - EGG_BUS_SENSOR_BLOCK_COMPUTED_VALUE_MAPPING_TABLE_BASE_OFFSET);
