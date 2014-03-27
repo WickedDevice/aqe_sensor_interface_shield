@@ -8,6 +8,9 @@
 #ifndef UTILITY_H_
 #define UTILITY_H_
 
+#define HW_VERSION_1_5
+//#define HW_VERSION_1_6
+
 /* TWI constants and prototypes */
 #define TWI_SLAVE_ADDRESS               3   // must be less than 127
 #define TWI_BUFFER_SIZE                 8
@@ -149,8 +152,15 @@
 
 // low side resistances in ohms
 #define NO2_SENSOR_R1 2200L
+#if defined(HW_VERSION_1_5)
 #define NO2_SENSOR_R2 0L
-#define NO2_SENSOR_R3 242000L
+#elif defined(HW_VERSION_1_6)
+#define NO2_SENSOR_R2 24200L
+#else
+#define NO2_SENSOR_R2 __error__
+#endif
+#define NO2_SENSOR_R3 244200L
+
 #define CO_SENSOR_R1  68000L
 #define CO_SENSOR_R2  68000L
 #define CO_SENSOR_R3  680000L
