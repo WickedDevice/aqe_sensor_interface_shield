@@ -19,7 +19,7 @@
 
 /* Sensor Module Memory Map Definition */
 
-#define EGG_BUS_FIRMWARE_VERSION_NUMBER   0x00000020
+#define EGG_BUS_FIRMWARE_VERSION_NUMBER   0x00000021
 
 // Header Definitions
 #define EGG_BUS_ADDRESS_SENSOR_COUNT      0

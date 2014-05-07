@@ -8,8 +8,8 @@
 #ifndef UTILITY_H_
 #define UTILITY_H_
 
-#define HW_VERSION_1_5
-//#define HW_VERSION_1_6
+//#define HW_VERSION_1_5
+#define HW_VERSION_1_6
 
 /* TWI constants and prototypes */
 #define TWI_SLAVE_ADDRESS               3   // must be less than 127

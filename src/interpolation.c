@@ -70,7 +70,6 @@ uint8_t getTableValue(uint8_t sensor_index, uint8_t table_index, uint8_t get_x_o
 #endif
 
     const uint8_t co_ppb[][2] = {
-            {0,0},
             {134,250},
             {168,125},
             {202,49},
